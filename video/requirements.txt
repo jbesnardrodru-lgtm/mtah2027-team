@@ -1,0 +1,7 @@
+# Probe-stage requirements: lower bounds only, so pip picks prebuilt wheels for any Python 3.10-3.14.
+# Exact pins get frozen (pip freeze) once the final pipeline is settled.
+ultralytics>=8.3.40
+av>=14.0
+opencv-python>=4.10
+numpy>=1.26
+pandas>=2.2

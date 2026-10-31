@@ -1,0 +1,6 @@
+# Possession pipeline (tracking + lab). Exact versions get frozen before the final submission.
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+scipy>=1.11
+# video layer: see video/requirements.txt
