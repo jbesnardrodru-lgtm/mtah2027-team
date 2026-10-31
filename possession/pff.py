@@ -24,14 +24,19 @@ FPS = 25
 
 
 def _find(folder, sub, gid, exts):
-    for pat in (f"{sub}/{gid}{exts}", f"{sub}/*{gid}*{exts}", f"*{gid}*{exts}", f"**/*{gid}*{exts}"):
-        hits = sorted(glob.glob(os.path.join(folder, pat), recursive=True))
-        named = [h for h in hits if sub.rstrip("s") in os.path.basename(h).lower()]
-        others = [h for h in hits if not any(k in os.path.basename(h).lower() for k in ("metadata", "roster"))]
-        pick = named or (others if sub == "tracking" else (hits if pat.startswith(sub) else []))
-        if pick:
-            return pick[0]
-    raise FileNotFoundError(f"no {sub} file for game {gid} under {folder}")
+    """Find the <sub> file ('metadata' / 'rosters' / 'tracking') of game gid anywhere under folder.
+    Matches on the folder or file name containing the kind, case-insensitive (PFF's own layout uses e.g.
+    'Metadata/<id>.json', 'Rosters/<id>.json', 'Tracking Data/<id>.jsonl.bz2')."""
+    key = {"metadata": "metadata", "rosters": "roster", "tracking": "tracking"}[sub]
+    hits = sorted(glob.glob(os.path.join(folder, "**", f"*{gid}*{exts}"), recursive=True))
+    hits = [h for h in hits if os.sep + "cache" + os.sep not in h]
+    if sub == "tracking":
+        pick = [h for h in hits if "metadata" not in h.lower() and "roster" not in h.lower()]
+    else:
+        pick = [h for h in hits if key in os.path.relpath(h, folder).lower()]
+    if not pick:
+        raise FileNotFoundError(f"no {sub} file ({exts}) for game {gid} under {folder}")
+    return pick[0]
 
 
 def list_games(folder=PFF_DIR):
