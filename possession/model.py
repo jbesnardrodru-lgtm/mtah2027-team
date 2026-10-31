@@ -28,7 +28,13 @@ NOISE_V = 2  # 1 = gaps at random moments, 2 = gaps where our tracking loses the
 
 
 def lab_game(g, noisy=True, seed=0, noise_v=None, placement="weighted", target_missing=0.41):
-    P, ball, team, label, period = load_game(g)
+    """g = 1/2/3 (Metrica sample games) or 'PFF<id>' (PFF World Cup 2022 game)."""
+    if isinstance(g, str) and g.startswith("PFF"):
+        from possession.pff import load_pff
+        P, ball, team, label, period = load_pff(int(g[3:]))
+        g = int(g[3:]) % 1000
+    else:
+        P, ball, team, label, period = load_game(g)
     if noisy:
         v = noise_v or NOISE_V
         P, ball = degrade(P, ball, label, seed=seed + g, period=period if v == 2 else None, placement=placement,

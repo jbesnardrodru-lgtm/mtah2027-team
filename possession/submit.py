@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--name", default="team_v1")
     ap.add_argument("--video", nargs="?", const="data/cache/ball_video_cpu.npz", default=None,
                     help="fill tracking gaps with the linked video ball (default: reproducible CPU version)")
+    ap.add_argument("--broadcast", action="store_true", help="fill remaining gaps with the synced broadcast ball")
     a = ap.parse_args()
 
     from possession.featcache import get
@@ -33,6 +34,15 @@ def main():
     P, ball, team = load("tactical")
     if a.video:
         ball = np.load(os.path.join(ROOT, a.video))["ball"]
+    if a.broadcast:
+        path = os.path.join(ROOT, "data", "cache", "broadcast_mapped.npz")
+        if not os.path.exists(path):
+            from possession.broadcast_sync import build_mapping
+            build_mapping(path)
+        bm = np.load(path)["ball"]
+        gap = np.isnan(ball[:, 0]) & ~np.isnan(bm[:, 0])
+        ball = ball.copy()
+        ball[gap, :2] = bm[gap, :2]
     segs = [(s, e + 1) for _, s, e in half_video_blocks(GAME)]
     F, _ = build(P, ball, team, segs, pitch=GAMES[GAME]["pitch"])
     p = proba(clf, F[:, cols])

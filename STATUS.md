@@ -1,6 +1,6 @@
 # Team status — More than a Hack 2027 (Phase 1: ball possession)
 
-Last updated: 31 October 2026. Read this first; it is the shared memory of the project.
+Last updated: 31 October 2026 (evening). Read this first; it is the shared memory of the project.
 
 ## 1. The task in one paragraph
 For each of the 199,319 frames of the tactical video of FC Barcelona vs Athletic Club, output `H` (Barça has the
@@ -45,8 +45,17 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | v5 | + team-reaction features (reversal of nearest players, convergence on a loose ball, defensive-line and sideways movement) | 0.56 |
 | **v6 (current best)** | + third training match | **0.595** |
 
-Current best submission: `evaluation/results/team_v6.csv` (not in git; regenerate with
-`python -m possession.submit --name team_v6 --video`). 313 possessions, 28% dead time.
+Current best submission: `evaluation/results/team_v7.csv` (not in git; regenerate with
+`python -m possession.submit --name team_v7 --video --broadcast`). 318 possessions, 28% dead time.
+v7 = v6 + broadcast ball (see below); 96.5% of frames identical to v6.
+
+### Broadcast feed (added 31 Oct)
+The broadcast is NOT chopped up: within each half it runs in real time, replays/close-ups sit where its
+homography is invalid. Aligning ball positions gives one offset per half, found automatically
+(`possession/broadcast_sync.py`): tactical frame = broadcast frame + 4014 (1st half) / + 26920 (2nd half),
+±2-4 frames; both cameras agree to a median 0.8 m. It fills 4,506 frames the tracking and the video layer
+both missed: ball missing 40.7% (tracking) -> 32.8% (+ video) -> 29.9% (+ broadcast). Expected value small
+(~+0.005-0.01 by the lab's estimate), but free and deterministic.
 
 ## 5. Tried and dropped (with lab numbers) — do not repeat without a new reason
 | Idea | Result |
@@ -71,7 +80,7 @@ Current best submission: `evaluation/results/team_v6.csv` (not in git; regenerat
 ## 7. Open tasks
 | Task | Owner | Notes |
 |---|---|---|
-| PFF FC World Cup 2022 loader (64 matches) → `possession/pff.py`, same output as `external.load_game` | Boris | resample to 25 fps; labels with the same rules as `_labels` |
+| PFF FC World Cup 2022 (64 matches): **loader written** (`possession/pff.py`, uses kloppy; tested on kloppy's PFF sample). Needs: sign up on the PFF form, download into `data/pff/{metadata,rosters,tracking}/`, run `python -m possession.pff` (sanity) and `python -m possession.lab3 v3 20 PFFALL` (lab with PFF in training) | Boris | PFF labels come from kloppy's ball state + owning team, which mirrors how the official answer key is built |
 | Technical document (approach, assets, training data, rules, limitations, reproduction) | | use sections 3–6 of this file |
 | README + `make_submission.sh` + `requirements-lock.txt` | | one command, exact versions |
 | Label-convention check: does the public answer key time stoppages/changes like our lab labels? | | understanding only, no tuning |

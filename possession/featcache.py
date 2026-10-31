@@ -16,7 +16,9 @@ def get(name, rebuild=False):
     if os.path.exists(path) and not rebuild:
         d = np.load(path, allow_pickle=True)
         return d["F"], list(d["names"]), d["label"]
-    if name.startswith("G"):
+    if name.startswith("PFF"):
+        F, names, label = lab_game(name)
+    elif name.startswith("G"):
         uniform = name.endswith("u")
         miss = float(name.split("m")[1]) / 100 if "m" in name else 0.41   # e.g. G1m27 = 27% ball missing
         F, names, label = lab_game(int(name[1:2]), seed=100 if uniform else 0,

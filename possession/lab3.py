@@ -12,13 +12,17 @@ from possession.errors import classify, spells
 GAMES = (1, 2, 3)
 
 
-def run(variant="v3", grid_ha=(10, 20, 40), sd=80, decoder=None):
+def run(variant="v3", grid_ha=(10, 20, 40), sd=80, decoder=None, extra_train=()):
+    """extra_train: names like 'PFF10517' added to the TRAINING side of every fold (tests stay G1-G3,
+    so scores remain comparable with earlier results)."""
     G = {k: get(f"G{k}") for k in GAMES}
+    X = [get(n) for n in extra_train]
     cols = columns(G[1][1], variant)
     P = {}
     for test in GAMES:
         tr = [k for k in GAMES if k != test]
-        P[test] = proba(fit([G[k][0][:, cols] for k in tr], [G[k][2] for k in tr], step=4), G[test][0][:, cols])
+        P[test] = proba(fit([G[k][0][:, cols] for k in tr] + [x[0][:, cols] for x in X],
+                            [G[k][2] for k in tr] + [x[2] for x in X], step=4), G[test][0][:, cols])
     out = {}
     for sh in grid_ha:
         r, rows, npred = [], [], 0
@@ -38,5 +42,9 @@ def run(variant="v3", grid_ha=(10, 20, 40), sd=80, decoder=None):
 
 if __name__ == "__main__":
     v = sys.argv[1] if len(sys.argv) > 1 else "v3"
-    ha = tuple(int(x) for x in sys.argv[2:]) or (10, 20, 40)
-    run(v, ha)
+    extra = [a for a in sys.argv[2:] if a.startswith("PFF")]
+    if "PFFALL" in extra:
+        from possession.pff import list_games
+        extra = [f"PFF{g}" for g in list_games()]
+    ha = tuple(int(x) for x in sys.argv[2:] if not x.startswith("PFF")) or (10, 20, 40)
+    run(v, ha, extra_train=extra)
