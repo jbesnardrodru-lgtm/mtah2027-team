@@ -57,6 +57,20 @@ homography is invalid. Aligning ball positions gives one offset per half, found 
 both missed: ball missing 40.7% (tracking) -> 32.8% (+ video) -> 29.9% (+ broadcast). Expected value small
 (~+0.005-0.01 by the lab's estimate), but free and deterministic.
 
+### PFF World Cup 2022 (added 31 Oct, evening)
+40 of 64 matches downloaded and prepared in `data/pff/` (the other 24 hit Google Drive's daily download
+limit; retry later). PFF labels (kloppy logic: dead after ball-out until the next on-the-ball event, owner
+switches at each touch) give a DIFFERENT convention from our Metrica event labels:
+| | Metrica lab | PFF (40) | public answer key (5 min) |
+|---|---|---|---|
+| possessions / match | 315-377 | 274 | ~3.4 per minute |
+| under 2 s | 19-22% | 14% | 2 of 17 |
+| dead time | 25-34% | 41% | 20% (opening minutes) |
+Adding PFF to training LOWERS the Metrica lab score (0.595 -> 0.545-0.56) and makes the model predict
+far fewer possessions: it learns PFF's convention. Undecided which convention the official answer key
+follows -> **the label-convention check now decides whether PFF is used.** Until then v7 (Metrica-trained)
+stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_score.py.
+
 ## 5. Tried and dropped (with lab numbers) — do not repeat without a new reason
 | Idea | Result |
 |---|---|

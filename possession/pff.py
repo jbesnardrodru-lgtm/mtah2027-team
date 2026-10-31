@@ -42,7 +42,8 @@ def _find(folder, sub, gid, exts):
 def list_games(folder=PFF_DIR):
     ids = set()
     for f in glob.glob(os.path.join(folder, "**", "*.jsonl*"), recursive=True):
-        digits = "".join(ch if ch.isdigit() else " " for ch in os.path.basename(f)).split()
+        stem = os.path.basename(f).split(".")[0]          # "3835.jsonl.bz2" -> "3835"
+        digits = "".join(ch if ch.isdigit() else " " for ch in stem).split()
         if digits:
             ids.add(int(digits[-1]))
     return sorted(ids)
