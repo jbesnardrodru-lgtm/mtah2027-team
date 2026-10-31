@@ -3,5 +3,5 @@ numpy>=1.26
 pandas>=2.2
 scikit-learn>=1.5
 scipy>=1.11
-kloppy>=3.19   # PFF World Cup 2022 reader (possession/pff.py)
+orjson>=3.9    # fast JSON for the PFF reader (optional; falls back to json)
 # video layer: see video/requirements.txt

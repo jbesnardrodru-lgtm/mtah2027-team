@@ -1,6 +1,6 @@
 """PFF FC World Cup 2022 (open data, other matches) -> the same format as external.load_game.
 
-Labels follow kloppy's PFF reader: the ball is DEAD after a ball-out or end-of-half game event and ALIVE
+Labels follow the same logic as kloppy's PFF reader (re-implemented as a memory-light stream): the ball is DEAD after a ball-out or end-of-half game event and ALIVE
 after a kick-off or any on-the-ball event; the owning team switches at each on-the-ball event. That mirrors
 how the official answer key is built (dead/alive + owning team from tracking), touch-based short possessions
 included.
@@ -48,59 +48,98 @@ def list_games(folder=PFF_DIR):
     return sorted(ids)
 
 
-def load_pff(gid, folder=PFF_DIR, cache=True):
+DEAD_EVENTS = {"OUT", "END"}
+ALIVE_EVENTS = {"FIRSTKICKOFF", "SECONDKICKOFF", "THIRDKICKOFF", "FOURTHKICKOFF", "OTB"}
+
+
+def _open(path):
+    import bz2
+    return bz2.open(path, "rb") if path.endswith(".bz2") else open(path, "rb")
+
+
+def load_pff(gid, folder=PFF_DIR, cache=True, max_slots=30):
+    """Streaming reader (memory-light): one line at a time, same ball-state / owner logic as kloppy's
+    PFF reader. Raw (unsmoothed) positions, players identified by team + shirt number."""
     out = os.path.join(folder, "cache", f"pff_{gid}.npz")
     if cache and os.path.exists(out):
         d = np.load(out)
         return d["P"], d["ball"], d["team"], d["label"], d["period"]
-    from kloppy import pff
-    meta = _find(folder, "metadata", gid, ".json")
-    rost = _find(folder, "rosters", gid, ".json")
+    try:
+        import orjson as js
+        loads = js.loads
+    except ImportError:
+        import json
+        loads = json.loads
+    import json
+    meta = json.load(open(_find(folder, "metadata", gid, ".json")))
+    meta = meta[0] if isinstance(meta, list) else meta
+    pitch = meta["stadium"]["pitches"][0] if meta.get("stadium", {}).get("pitches") else {"length": 105.0, "width": 68.0}
+    Lp, Wp = float(pitch["length"]), float(pitch["width"])
     try:
         raw = _find(folder, "tracking", gid, ".jsonl.bz2")
     except FileNotFoundError:
         raw = _find(folder, "tracking", gid, ".jsonl")
-    ds = pff.load_tracking(meta, rost, raw, coordinates="kloppy")
-    df = ds.to_df()
-    home, away = ds.metadata.teams[0], ds.metadata.teams[1]
-    hid = {str(p.player_id) for p in home.players}
-    aid = {str(p.player_id) for p in away.players}
-    pids = [c[:-2] for c in df.columns if c.endswith("_x") and c != "ball_x"]
-    pids = [p for p in pids if p in hid] + [p for p in pids if p in aid]
-    team = np.array([0 if p in hid else 1 for p in pids], np.int8)
 
-    t = df["timestamp"].dt.total_seconds().values
-    per = df["period_id"].values
-    rows, period, holes = [], [], []
-    for k in (1, 2):                                   # regulation halves only
-        idx = np.flatnonzero(per == k)
-        if not len(idx):
+    slots = [{}, {}]                                    # shirt number -> slot, per team
+    rows = {1: [], 2: []}                               # per period: (time, xy[2*max_slots,2], ball[3], state, owner)
+    state, owner = "dead", None
+    with _open(raw) as fh:
+        for line in fh:
+            fr = loads(line)
+            ge = fr.get("game_event")
+            if ge:
+                et = ge.get("game_event_type")
+                if et in DEAD_EVENTS:
+                    state = "dead"
+                elif et in ALIVE_EVENTS:
+                    state = "alive"
+                if ge.get("home_ball") is not None:
+                    owner = "H" if ge["home_ball"] else "A"
+            per = fr.get("period")
+            if per not in (1, 2):
+                continue
+            t = fr.get("periodElapsedTime")
+            if t is None:
+                continue
+            xy = np.full((2 * max_slots, 2), np.nan, np.float32)
+            for k, key in ((0, "homePlayers"), (1, "awayPlayers")):
+                for pl in fr.get(key) or []:
+                    j = slots[k].setdefault(str(pl.get("jerseyNum")), len(slots[k]))
+                    if j < max_slots and pl.get("x") is not None:
+                        xy[k * max_slots + j] = (pl["x"] / Lp + 0.5, pl["y"] / Wp + 0.5)
+            b = np.full(3, np.nan, np.float32)
+            balls = fr.get("balls") or []
+            if balls and balls[0].get("x") is not None:
+                b[:] = (balls[0]["x"] / Lp + 0.5, balls[0]["y"] / Wp + 0.5, balls[0].get("z") or np.nan)
+            rows[per].append((float(t), xy, b, state, owner))
+
+    nh, na = min(len(slots[0]), max_slots), min(len(slots[1]), max_slots)
+    keep = list(range(nh)) + [max_slots + j for j in range(na)]
+    team = np.r_[np.zeros(nh), np.ones(na)].astype(np.int8)
+    Ps, balls_, labels, periods = [], [], [], []
+    for per in (1, 2):
+        R = rows[per]
+        if not R:
             continue
-        grid = np.arange(t[idx[0]], t[idx[-1]], 1 / FPS)  # resample ~29.97 fps -> 25 fps (nearest frame)
-        pos = np.clip(np.searchsorted(t[idx], grid), 0, len(idx) - 1)
-        prev = np.clip(pos - 1, 0, len(idx) - 1)
-        use = np.where(np.abs(t[idx][prev] - grid) < np.abs(t[idx][pos] - grid), prev, pos)
-        j = idx[use]
-        rows.append(j); period.append(np.full(len(j), float(k)))
-        holes.append(np.abs(t[j] - grid) > 0.2)        # no PFF frame within 0.2 s: a hole, not a copy
-    j = np.concatenate(rows); period = np.concatenate(period); hole = np.concatenate(holes)
-
-    xy = np.stack([df[[p + "_x", p + "_y"]].values[j] for p in pids], 1).astype(np.float32)
+        t = np.array([r[0] for r in R])
+        order = np.argsort(t, kind="stable"); t = t[order]
+        grid = np.arange(t[0], t[-1], 1 / FPS)            # ~29.97 fps -> 25 fps, nearest frame
+        pos = np.clip(np.searchsorted(t, grid), 0, len(t) - 1)
+        prev = np.clip(pos - 1, 0, len(t) - 1)
+        use = np.where(np.abs(t[prev] - grid) < np.abs(t[pos] - grid), prev, pos)
+        hole = np.abs(t[use] - grid) > 0.2
+        src = order[use]
+        xy = np.stack([R[i][1][keep] for i in src]).astype(np.float32)
+        bl = np.stack([R[i][2] for i in src]).astype(np.float32)
+        lab = np.array(["D" if R[i][3] == "dead" else (R[i][4] or "X") for i in src], "<U1")
+        xy[hole] = np.nan; bl[hole] = np.nan; lab[hole] = "X"
+        Ps.append(xy); balls_.append(bl); labels.append(lab); periods.append(np.full(len(src), float(per)))
+    xy = np.concatenate(Ps); ball = np.concatenate(balls_); label = np.concatenate(labels)
+    period = np.concatenate(periods)
     m = xy * np.array([105, 68], np.float32)
     v = np.full(xy.shape[:2], np.nan, np.float32)
     v[5:] = np.linalg.norm(m[5:] - m[:-5], axis=2) * FPS / 5
-    xy[hole] = np.nan
     P = np.concatenate([xy, v[..., None]], 2)
-    P[hole] = np.nan
-    ball = np.full((len(j), 3), np.nan, np.float32)
-    ball[:, :2] = df[["ball_x", "ball_y"]].values[j]
-    ball[hole] = np.nan
-
-    state = df["ball_state"].astype(str).values[j]
-    owner = df["ball_owning_team_id"].astype(str).values[j]
-    label = np.where(state == "dead", "D", np.where(owner == str(home.team_id), "H",
-                     np.where(owner == str(away.team_id), "A", "X"))).astype("<U1")
-    label[hole] = "X"
     if cache:
         os.makedirs(os.path.dirname(out), exist_ok=True)
         np.savez(out, P=P, ball=ball, team=team, label=label, period=period)
