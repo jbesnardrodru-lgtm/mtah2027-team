@@ -185,3 +185,23 @@ def decode_tv(p, q, segments, base, beta, prior, switch_d, k_dead=MIN_DEAD):
     for a, b in segments:
         out[a:b] = min_dead(STATES[viterbi_tv(p[a:b], cost[a:b], switch_d)], k_dead)
     return out
+
+
+# ---- temporal context: time-shifted copies of the key signals -----------------------------------------
+LAG_KEYS = ("rv_dnear_h", "rv_dnear_a", "rv_split", "conv_next_h", "conv_next_a", "conv_both", "ddiff",
+            "tch_bal_12", "v_cxh", "v_cxa", "dl_v_h", "dl_v_a", "cdiff", "vall", "bspeed")
+LAGS = (-50, -25, 25, 50)   # frames: 2 s and 1 s before / after
+
+
+def add_lags(F, names, keys=LAG_KEYS, lags=LAGS):
+    cols, new = [F], []
+    for k in keys:
+        x = F[:, names.index(k)]
+        for L in lags:
+            y = np.full_like(x, np.nan)
+            if L > 0:
+                y[:-L] = x[L:]
+            else:
+                y[-L:] = x[:L]
+            cols.append(y[:, None]); new.append(f"{k}_lag{L:+d}")
+    return np.hstack(cols), list(names) + new
