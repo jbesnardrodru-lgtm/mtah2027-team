@@ -49,14 +49,14 @@ def main():
     ap.add_argument("--half", type=int, default=1)
     ap.add_argument("--minute", type=float, default=20)
     ap.add_argument("--seconds", type=float, default=60)
-    ap.add_argument("--sub", default="evaluation/results/team_v9.csv")
+    ap.add_argument("--sub", default="evaluation/results/team_v11.csv")
     a = ap.parse_args()
     blocks = {h: (s, e) for h, s, e in half_video_blocks(GAME)}
     f0 = int(blocks[a.half][0] + a.minute * 60 * 25 + (2934 if a.half == 2 else 0))
     n = int(a.seconds * 25)
     lab = pd.read_csv(os.path.join(ROOT, a.sub)).label.values
     d = np.load(os.path.join(ROOT, "data", "cache", "tactical.npz")); P, tball, team = d["P"], d["ball"], d["team"]
-    vball = np.load(os.path.join(ROOT, "data", "cache", "ball_video_cpu.npz"))["ball"]
+    vball = np.load(os.path.join(ROOT, "data", "cache", "ball_video_cpu_v2.npz"))["ball"]
     bpath = os.path.join(ROOT, "data", "cache", "broadcast_mapped.npz")
     bball = np.load(bpath)["ball"] if os.path.exists(bpath) else np.full_like(tball, np.nan)
     M, _ = homography()
