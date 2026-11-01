@@ -7,7 +7,7 @@ Output: data/clips/yellow_reel.mp4 (stays on this machine: it is match footage).
 import argparse, os
 import numpy as np, pandas as pd, cv2
 from common import ROOT, asset_paths, homography, project, half_video_blocks, GAME
-from render_clip import Writer, COL, TXT
+from render_clip import Writer, COL, TXT, head_marker
 
 
 def segments(total_s, min_len=10, pad=25):
@@ -59,8 +59,7 @@ def main():
                 for j in range(P.shape[1]):
                     if np.isnan(P[idx, j, 0]):
                         continue
-                    u, v = project(M[idx], P[idx, j, 0], P[idx, j, 1])
-                    cv2.circle(img, (int(u), int(v)), 9, (255, 255, 255) if team[j] == 0 else (0, 0, 0), 2)
+                    head_marker(img, M[idx], P[idx, j, 0], P[idx, j, 1], team[j])
                 if not np.isnan(tball[idx, 0]):
                     u, v = project(M[idx], tball[idx, 0], tball[idx, 1]); cv2.circle(img, (int(u), int(v)), 16, (0, 220, 0), 3)
                 elif not np.isnan(vball[idx, 0]):
@@ -73,7 +72,7 @@ def main():
                 mm = (idx - blocks[h][0] - (0 if h == 1 else 2934)) / 1500
                 cv2.putText(img, f"moment {k+1}/{len(segs)}   half {h} {int(mm):02d}:{int((mm % 1) * 60):02d}", (W - 520, 38),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                cv2.putText(img, "green = organisers' tracking   yellow = OUR detector (tracking had lost the ball)",
+                cv2.putText(img, "green = organisers' tracking   yellow = OUR detector   triangles: white Barca, black Athletic",
                             (20, H - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                 writer.write(img); written += 1
     writer.close()

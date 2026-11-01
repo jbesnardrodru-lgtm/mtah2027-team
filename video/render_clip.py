@@ -13,6 +13,18 @@ COL = {"H": (60, 20, 150), "A": (40, 40, 220), "D": (120, 120, 120), "X": (60, 6
 TXT = {"H": "BARCELONA", "A": "ATHLETIC", "D": "BALL DEAD", "X": "-"}
 
 
+def head_marker(img, Mf, x, y, side):
+    """Small triangle above the player's head (keeps the feet and the ball visible). Height follows the local
+    perspective: pixels per metre measured from the homography at the player's position."""
+    u, v = project(Mf, x, y)
+    u2, v2 = project(Mf, x, y + 1 / 68.0)
+    ppm = max(4.0, float(np.hypot(u2 - u, v2 - v)))
+    top = v - 2.3 * ppm
+    pts = np.array([[u, top + 0.5 * ppm], [u - 0.35 * ppm, top], [u + 0.35 * ppm, top]], np.int32)
+    cv2.fillPoly(img, [pts], (255, 255, 255) if side == 0 else (0, 0, 0))
+    cv2.polylines(img, [pts], True, (0, 0, 0) if side == 0 else (255, 255, 255), 1)
+
+
 class Writer:
     """MP4 writer that works without extra installs: ffmpeg if present, else macOS's own H.264 encoder via
     OpenCV ('avc1'), else plain MPEG-4 ('mp4v')."""
@@ -81,8 +93,7 @@ def main():
                 x, y = P[idx, j, 0], P[idx, j, 1]
                 if np.isnan(x):
                     continue
-                u, v = project(M[idx], x, y)
-                cv2.circle(img, (int(u), int(v)), 9, (255, 255, 255) if team[j] == 0 else (0, 0, 0), 2)
+                head_marker(img, M[idx], x, y, team[j])
             ball_drawn = False
             for src, col in ((tball, (0, 220, 0)), (vball, (0, 220, 255)), (bball, (255, 220, 0))):
                 if not ball_drawn and not np.isnan(src[idx, 0]):
@@ -95,7 +106,7 @@ def main():
             mm = (idx - blocks[a.half][0]) / 25 / 60
             cv2.putText(img, f"half {a.half}  {int(mm):02d}:{int((mm % 1) * 60):02d}   frame {idx}", (W - 470, 38),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-            cv2.putText(img, "ball: green tracking | yellow our detector | cyan broadcast   players: white Barca, black Athletic",
+            cv2.putText(img, "ball: green tracking | yellow our detector | cyan broadcast   players: white triangle Barca, black Athletic",
                         (20, H - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
             writer.write(img); written += 1
     writer.close()
