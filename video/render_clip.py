@@ -13,6 +13,37 @@ COL = {"H": (60, 20, 150), "A": (40, 40, 220), "D": (120, 120, 120), "X": (60, 6
 TXT = {"H": "BARCELONA", "A": "ATHLETIC", "D": "BALL DEAD", "X": "-"}
 
 
+class Writer:
+    """MP4 writer that works without extra installs: ffmpeg if present, else macOS's own H.264 encoder via
+    OpenCV ('avc1'), else plain MPEG-4 ('mp4v')."""
+    def __init__(self, out, W, H):
+        import shutil
+        self.ff = None
+        if shutil.which("ffmpeg"):
+            self.ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24",
+                                        "-s", f"{W}x{H}", "-r", "25", "-i", "-", "-c:v", "libx264", "-preset",
+                                        "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", out], stdin=subprocess.PIPE)
+            return
+        for code in ("avc1", "mp4v"):
+            self.cv = cv2.VideoWriter(out, cv2.VideoWriter_fourcc(*code), 25, (W, H))
+            if self.cv.isOpened():
+                print("encoder:", code)
+                return
+        raise RuntimeError("no video encoder available")
+
+    def write(self, img):
+        if self.ff:
+            self.ff.stdin.write(img.tobytes())
+        else:
+            self.cv.write(img)
+
+    def close(self):
+        if self.ff:
+            self.ff.stdin.close(); self.ff.wait()
+        else:
+            self.cv.release()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--half", type=int, default=1)
@@ -32,9 +63,7 @@ def main():
     os.makedirs(os.path.join(ROOT, "data", "clips"), exist_ok=True)
     out = os.path.join(ROOT, "data", "clips", f"clip_h{a.half}_m{a.minute:g}.mp4")
     W, H = 1280, 720
-    ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}",
-                           "-r", "25", "-i", "-", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-                           "-pix_fmt", "yuv420p", out], stdin=subprocess.PIPE)
+    writer = Writer(out, W, H)
     import av
     with av.open(asset_paths()["video"]) as c:
         s = c.streams.video[0]; s.thread_type = "AUTO"
@@ -68,9 +97,11 @@ def main():
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
             cv2.putText(img, "ball: green tracking | yellow our detector | cyan broadcast   players: white Barca, black Athletic",
                         (20, H - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
-            ff.stdin.write(img.tobytes()); written += 1
-    ff.stdin.close(); ff.wait()
+            writer.write(img); written += 1
+    writer.close()
     print(f"wrote {out}: {written} frames ({written/25:.0f} s)")
+    if written == 0:
+        print("nothing written: check --half / --minute are inside the match")
 
 
 if __name__ == "__main__":
