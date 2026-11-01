@@ -102,7 +102,13 @@ def final(seed, epochs=None, augmented=True):
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0).clip(-6, 6).astype(np.float32)
     out = f"data/cache/seq_final{'_aug' if augmented else ''}_s{seed}.npy"
     np.save(out, predict(net, X, len(F)).astype(np.float32))
+    open(out + ".inputs", "w").write(inputs_fingerprint())
     return out
+
+
+def inputs_fingerprint(path="data/cache/final_inputs.npz"):
+    import hashlib
+    return hashlib.md5(np.load(path)["F"].tobytes()).hexdigest()
 
 
 def aug_fold(test, seed, epochs=10):

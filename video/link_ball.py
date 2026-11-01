@@ -36,7 +36,7 @@ def walk(order, cand, start_xy, P_xy, a):
             if best is None or conf > best[2]:
                 best = (x, y, conf)
         if best is None:
-            if last_f is not None and abs(f - last_f) > 50:   # lost it for 2 s: stop this walk
+            if last_f is not None and abs(f - last_f) > a.lost:   # lost it for too long: stop this walk
                 break
             continue
         x, y, _ = best
@@ -54,9 +54,54 @@ def walk(order, cand, start_xy, P_xy, a):
     return acc
 
 
+def tracklets(frames, cand, P_xy, conf=0.4, min_len=15, max_gap=5):
+    """Mid-gap tracks: chain confident candidates frame to frame (physically reachable), keep chains that last
+    >= min_len frames on the pitch and either move (> 1 m overall) or stay near a player (not a parked ball)."""
+    out = {}
+    pos = {int(f): i for i, f in enumerate(frames)}
+    active = []                                     # each: list of (frame, x, y, c)
+    done = []
+    for f in frames:
+        f = int(f); c = cand[pos[f]]
+        pts = [(x, y, q) for x, y, q in c if not np.isnan(q) and q >= conf
+               and -1 / PITCH[0] <= x <= 1 + 1 / PITCH[0] and -1 / PITCH[1] <= y <= 1 + 1 / PITCH[1]]
+        still = []
+        for tr in active:
+            lf, lx, ly, _ = tr[-1]
+            if f - lf > max_gap:
+                done.append(tr); continue
+            best = None
+            for x, y, q in pts:
+                d = np.hypot((x - lx) * PITCH[0], (y - ly) * PITCH[1])
+                if d <= 30 * (f - lf) / 25 + 1 and (best is None or d < best[0]):
+                    best = (d, x, y, q)
+            if best:
+                tr.append((f, best[1], best[2], best[3])); pts = [p for p in pts if (p[0], p[1]) != (best[1], best[2])]
+            still.append(tr)
+        active = still + [[(f, x, y, q)] for x, y, q in pts]
+    done += active
+    for tr in done:
+        if len(tr) < min_len:
+            continue
+        xs = np.array([[x, y] for _, x, y, _ in tr])
+        moved = np.hypot((xs[:, 0].max() - xs[:, 0].min()) * PITCH[0], (xs[:, 1].max() - xs[:, 1].min()) * PITCH[1])
+        fm, xm, ym, _ = tr[len(tr) // 2]
+        pl = P_xy[fm]
+        near = np.nanmin(np.hypot((pl[:, 0] - xm) * PITCH[0], (pl[:, 1] - ym) * PITCH[1])) if np.isfinite(pl).any() else np.inf
+        if moved < 1 and near > 8:
+            continue                                  # parked spare ball
+        for fr, x, y, _ in tr:
+            out[fr] = (x, y)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--conf", type=float, default=0.3)
+    ap.add_argument("--lost", type=int, default=50, help="frames without a credible candidate before a walk stops")
+    ap.add_argument("--tracklets", action="store_true", help="also fill mid-gap frames with smooth confident tracks")
+    ap.add_argument("--tconf", type=float, default=0.4)
+    ap.add_argument("--tlen", type=int, default=15)
     ap.add_argument("--inp", default="data/cache/video_ball.npz")
     ap.add_argument("--out", default="data/cache/ball_video.npz")
     a = ap.parse_args()
@@ -85,6 +130,9 @@ def main():
             for f, xy in back.items():
                 if f in acc and np.hypot((acc[f][0] - xy[0]) * PITCH[0], (acc[f][1] - xy[1]) * PITCH[1]) > 3:
                     continue      # the two walks disagree: trust neither
+                acc.setdefault(f, xy)
+        if a.tracklets:
+            for f, xy in tracklets(frames[s:e + 1], cand[s:e + 1], P, conf=a.tconf, min_len=a.tlen).items():
                 acc.setdefault(f, xy)
         if not acc:
             continue

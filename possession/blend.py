@@ -1,6 +1,7 @@
 """v9: blend the gradient-boosting probabilities (v7) with the average of 3 sequence models trained on
 noise-augmented data (3 degraded copies of each external match), then decode.
 Lab (3 external matches): v7 0.595 -> v8 0.611 -> v9 0.629 spellF1, switching cost 10.
+v10 = v9 with the video ball linked with mid-gap tracks (31% of lost frames recovered instead of 19%).
 Probabilities are rounded to 3 decimals before decoding, so microscopic numeric differences between
 computers cannot flip a decision (reproducibility).
 
@@ -27,6 +28,12 @@ def main():
     d = np.load(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     p_gb, segs = d["p_gb"], [tuple(x) for x in d["segs"]]
     tag = "" if a.original else "_aug"
+    from possession.seq import inputs_fingerprint
+    fp = inputs_fingerprint(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
+    for s_ in SEEDS:
+        side = os.path.join(ROOT, "data", "cache", f"seq_final{tag}_s{s_}.npy.inputs")
+        if not os.path.exists(side) or open(side).read() != fp:
+            raise SystemExit(f"sequence model {s_} was computed from different inputs: re-run python -m possession.seq final {s_}")
     p_seq = np.mean([np.load(os.path.join(ROOT, "data", "cache", f"seq_final{tag}_s{s}.npy")) for s in SEEDS], 0)
     p = np.round(0.5 * p_gb + 0.5 * p_seq, 3)
     p[segs[1][0]:SECOND_HALF_KICKOFF] = [0, 0, 1]

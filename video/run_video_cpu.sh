@@ -4,7 +4,7 @@
 # Writes progress to data/video_cpu.log via the caller's redirect.
 set -e
 export PYTHONUNBUFFERED=1
-if [ ! -f data/cache/ball_video_cpu.npz ]; then
+if [ ! -f data/cache/ball_video_cpu_v2.npz ]; then
 echo "== $(date) stage 0: determinism check (same 200 frames twice)"
 python video/recover_ball.py --device cpu --limit 200 --model yolo11s.pt --out data/cache/det_check_a.npz
 python video/recover_ball.py --device cpu --limit 200 --model yolo11s.pt --out data/cache/det_check_b.npz
@@ -17,5 +17,5 @@ echo "== $(date) stage 2: training (CPU, deterministic)"
 echo "== $(date) stage 3: ball recovery (CPU)"
 [ -f data/cache/video_ball_cpu.npz ] || python video/recover_ball.py --device cpu --model data/ballmodel/run_cpu/weights/best.pt --out data/cache/video_ball_cpu.npz
 echo "== $(date) stage 4: linking"
-[ -f data/cache/ball_video_cpu.npz ] || python video/link_ball.py --inp data/cache/video_ball_cpu.npz --out data/cache/ball_video_cpu.npz
+[ -f data/cache/ball_video_cpu_v2.npz ] || python video/link_ball.py --tracklets --inp data/cache/video_ball_cpu.npz --out data/cache/ball_video_cpu_v2.npz
 echo "== $(date) ALL DONE"

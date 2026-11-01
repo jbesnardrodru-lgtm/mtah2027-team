@@ -1,5 +1,5 @@
 #!/bin/sh
-# One command: organisers' data bundle -> final submission CSV (v9).
+# One command: organisers' data bundle -> final submission CSV (v10).
 #
 #   sh make_submission.sh <team_name>
 #
@@ -36,11 +36,12 @@ step "4/7 lab features: 3 external matches x 3 noisy copies"
 python -m possession.featcache_missing G1 G2 G3 G1r1 G2r1 G3r1 G1r2 G2r2 G3r2
 
 step "5/7 gradient-boosting model + video and broadcast ball (v7 stage)"
-python -m possession.submit --name "${TEAM}_v7" --video --broadcast
+python -m possession.submit --name "${TEAM}_v7" --video data/cache/ball_video_cpu_v2.npz --broadcast
 
 step "6/7 sequence models (3 seeds)"
+FP=$(python -c "from possession.seq import inputs_fingerprint; print(inputs_fingerprint())")
 for s in 0 1 2; do
-  [ -f "data/cache/seq_final_aug_s$s.npy" ] || python -m possession.seq final $s
+  [ "$(cat data/cache/seq_final_aug_s$s.npy.inputs 2>/dev/null)" = "$FP" ] || python -m possession.seq final $s
 done
 
 step "7/7 blend -> evaluation/results/${TEAM}.csv"

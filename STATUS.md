@@ -46,7 +46,18 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | v6 | + third training match | 0.595 |
 | v7 | + broadcast ball (not measurable in the lab) | 0.595 |
 | v8 | blend 50/50 of v7 with a temporal CNN (3 seeds averaged, sees ±12 s at 12.5 steps/s), switch cost 10 | 0.611 |
-| **v9 (current best)** | v8, but the CNNs trained on 3 differently-degraded copies of each external match (noise augmentation); probabilities rounded to 3 decimals | **0.629** (0.646 / 0.650 / 0.592) |
+| v9 | v8, but the CNNs trained on 3 differently-degraded copies of each external match (noise augmentation); probabilities rounded to 3 decimals | 0.629 (0.646 / 0.650 / 0.592) |
+| **v10 (current best)** | v9 + better video ball linking (mid-gap tracks): 31% of lost-ball frames recovered instead of 19%; ball visible 75% of the match | lab-equivalent est. +0.005-0.01 (see below); 98.6% of frames as v9 |
+
+### What a recovered ball is worth (lab simulation, 1 Nov) — `possession/exp_recover.py`
+Recover a share of every gap from its edges; a share of the recovered stretches deliberately WRONG (5-25 m off):
+| recovered share of each gap | 0% wrong | 15% wrong | 30% wrong |
+|---|---|---|---|
+| 0% | 0.595 | | |
+| 20% | 0.604 | 0.602 | 0.607 |
+| 40% | 0.617 | 0.611 | 0.610 |
+=> wrong positions cost little (<= 0.007); coverage matters. Hence the more generous linking in v10. Against the
+broadcast as an independent referee, the extra positions are as accurate as before (68% vs 72% within 5 m).
 
 Current best submission: `evaluation/results/team_v9.csv` (not in git). Regenerate:
 ```bash
@@ -121,7 +132,8 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 ```bash
 sh make_submission.sh <team_name>      # writes evaluation/results/<team_name>.csv and prints its checksum
 ```
-Verified 1 Nov on Jorge's Mac: reproduces team_v9.csv byte-for-byte (md5 a70399a0...).
+Verified 1 Nov on Jorge's Mac: reproduces team_v10.csv byte-for-byte (md5 01c44e533d55d48bf720b93875d92cf8).
+Sequence-model outputs carry a fingerprint of their inputs; the blend refuses stale ones.
 From scratch (empty data/cache, no models) it takes ~15-20 h on a laptop CPU, almost all in the video stage.
 Second-machine test (Boris): fresh clone + data bundle + `sh make_submission.sh <team>`; the md5 must match.
 
