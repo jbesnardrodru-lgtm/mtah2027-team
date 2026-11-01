@@ -43,10 +43,20 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | official baseline | nearest player + majority vote | ~0.25–0.29 |
 | v3 | first state model | 0.51 |
 | v5 | + team-reaction features (reversal of nearest players, convergence on a loose ball, defensive-line and sideways movement) | 0.56 |
-| **v6 (current best)** | + third training match | **0.595** |
+| v6 | + third training match | 0.595 |
+| v7 | + broadcast ball (not measurable in the lab) | 0.595 |
+| **v8 (current best)** | blend 50/50 of v7 with a temporal CNN (3 seeds averaged, sees ±12 s at 12.5 steps/s), switch cost 10 | **0.611** |
 
-Current best submission: `evaluation/results/team_v7.csv` (not in git; regenerate with
-`python -m possession.submit --name team_v7 --video --broadcast`). 318 possessions, 28% dead time.
+Current best submission: `evaluation/results/team_v8.csv` (not in git). Regenerate:
+```bash
+python -m possession.submit --name team_v7 --video --broadcast   # v7 + saves final_inputs.npz
+python -m possession.seq final 0 && python -m possession.seq final 1 && python -m possession.seq final 2   # ~2.5 min each
+python -m possession.blend --name team_v8
+```
+300 possessions, 30% dead time (incl. the published pre-kickoff block). Lab per match: 0.631 / 0.631 / 0.573
+vs v7 0.602 / 0.609 / 0.573. Deterministic (re-run gives a byte-identical sequence-model output).
+Caveat: on our match the sequence model is stickier than gradient boosting (335 vs 374 possessions at the
+same setting) while in the lab they agree (304 vs 302) -> some domain sensitivity. v7 is the fallback.
 v7 = v6 + broadcast ball (see below); 96.5% of frames identical to v6.
 
 ### Broadcast feed (added 31 Oct)

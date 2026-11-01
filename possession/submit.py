@@ -46,6 +46,9 @@ def main():
     segs = [(s, e + 1) for _, s, e in half_video_blocks(GAME)]
     F, _ = build(P, ball, team, segs, pitch=GAMES[GAME]["pitch"])
     p = proba(clf, F[:, cols])
+    # saved for the sequence model and the blend (possession/seq.py final, possession/blend.py)
+    np.savez(os.path.join(ROOT, "data", "cache", "final_inputs.npz"), F=F[:, cols].astype(np.float32),
+             p_gb=p.astype(np.float32), segs=np.array(segs))
     p[segs[1][0]:SECOND_HALF_KICKOFF] = [0, 0, 1]
     labels = decode(p, segs, SWITCH_HA, SWITCH_D)
 
