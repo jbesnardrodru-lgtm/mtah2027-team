@@ -106,6 +106,35 @@ def _tracking_g3():
     return P, ball, team, period, pd.DataFrame(rows)
 
 
+def align_restarts(label, ball, pitch=(105.0, 68.0), before=25, after=125):
+    """Move the end of every stoppage (D -> H/A) to the moment the ball starts moving (speed > 3 m/s),
+    searched from 1 s before to 5 s after the event-based restart. The Laws of the Game put the ball back in
+    play when it is kicked and clearly moves; the official answer key restarts there too, while Metrica's
+    set-piece events are time-stamped about 2.3 s earlier (when the player sets up the ball)."""
+    x = (ball[:, 0] - 0.5) * pitch[0]; y = (ball[:, 1] - 0.5) * pitch[1]
+    v = np.full(len(x), np.nan)
+    v[2:-2] = np.hypot(x[4:] - x[:-4], y[4:] - y[:-4]) * FPS / 4
+    moving = np.flatnonzero((v[1:] > 3) & (v[:-1] <= 3)) + 1
+    lab = label.copy()
+    ends = np.flatnonzero((lab[:-1] == "D") & np.isin(lab[1:], ["H", "A"])) + 1
+    moved = 0
+    for t in ends:
+        cand = moving[(moving >= t - before) & (moving <= t + after)]
+        if not len(cand):
+            continue
+        m = cand[0]
+        team = lab[t]
+        if m > t:
+            lab[t:m] = "D"          # stoppage lasts until the kick
+        elif m < t:
+            lab[m:t] = team         # play restarted a little before the event stamp
+        moved += 1
+    return lab, moved
+
+
+ALIGN_RESTARTS = False   # tested 1 Nov: matched the next pass, not the restart kick (see STATUS.md)
+
+
 def load_game(g):
     cache = os.path.join(EXT, f"G{g}.npz")
     if os.path.exists(cache):
@@ -117,6 +146,8 @@ def load_game(g):
         P, ball, team, period = _tracking(g)
         ev = pd.read_csv(os.path.join(EXT, f"G{g}_RawEventsData.csv"))
     label = _labels(ev, len(ball), period)
+    if ALIGN_RESTARTS:
+        label, _ = align_restarts(label, ball)
     np.savez(cache, P=P, ball=ball, team=team, label=label, period=period)
     return P, ball, team, label, period
 

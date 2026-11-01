@@ -74,6 +74,8 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 ## 5. Tried and dropped (with lab numbers) — do not repeat without a new reason
 | Idea | Result |
 |---|---|
+| PFF in training (40 matches), alone or only for the team decision | 0.545-0.575 on the Metrica lab; different convention (more dead time, fewer short possessions). The official key sits between the two (possession counts closer to PFF, dead time closer to Metrica) on its single public 5-minute window: not decidable. Parked (`possession/convention.py`) |
+| Re-timing lab stoppage ends to "ball starts moving" | Artefact: in the Metrica games the ball is not tracked while dead and reappears already moving, so the detector caught the NEXT pass (~2 s later). Retraining dropped the lab to 0.551. Reverted; `ALIGN_RESTARTS = False` (`possession/convention_timing.py`). Strict "kick from a still ball" events are too rare to measure the convention (official n=0, lab n=10) |
 | Touch detection from the tracking ball | +0.065 on the raw lab, ~+0.02 (noise) once the lab ball moves like ours: our tracker smooths the ball path, touches are blurred |
 | Turnover-aware decoder (switch cost from a turnover classifier) | 0.599 vs 0.595: within noise |
 | Time-shifted copies of key features | 0.586 |
