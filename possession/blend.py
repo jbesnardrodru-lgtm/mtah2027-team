@@ -2,6 +2,8 @@
 noise-augmented data (3 degraded copies of each external match), then decode.
 Lab (3 external matches): v7 0.595 -> v8 0.611 -> v9 0.629 spellF1, switching cost 10.
 v10 = v9 with the video ball linked with mid-gap tracks (31% of lost frames recovered instead of 19%).
+v11 = v10 with every possession counting equally in training (frame weight 1/length of its run), both models:
+lab 0.629 -> 0.644; possessions < 2 s recovered 14% -> 22%, 2-5 s 48% -> 57%.
 Probabilities are rounded to 3 decimals before decoding, so microscopic numeric differences between
 computers cannot flip a decision (reproducibility).
 
@@ -24,10 +26,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", default="team_v9")
     ap.add_argument("--original", action="store_true", help="v8: sequence models without noise augmentation")
+    ap.add_argument("--wpow", type=float, default=0.0, help="1 = possession-weighted sequence models (v11)")
     a = ap.parse_args()
     d = np.load(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     p_gb, segs = d["p_gb"], [tuple(x) for x in d["segs"]]
-    tag = "" if a.original else "_aug"
+    tag = ("" if a.original else "_aug") + ("" if not a.wpow else f"_w{a.wpow:g}")
     from possession.seq import inputs_fingerprint
     fp = inputs_fingerprint(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     for s_ in SEEDS:

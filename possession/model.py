@@ -43,12 +43,27 @@ def lab_game(g, noisy=True, seed=0, noise_v=None, placement="weighted", target_m
     return F, names, label
 
 
-def fit(Fs, labels, step=3, seed=0):
+def run_weights(label, power=1.0):
+    """1 / (length of the run each frame belongs to) ** power: every possession counts equally (spellF1's view)."""
+    w = np.zeros(len(label))
+    s = 0
+    for i in range(1, len(label) + 1):
+        if i == len(label) or label[i] != label[s]:
+            w[s:i] = (1.0 / (i - s)) ** power if label[s] in STATES else 0.0
+            s = i
+    return w
+
+
+def fit(Fs, labels, step=3, seed=0, weight_power=0.0):
     X = np.vstack([F[::step][np.isin(l[::step], STATES)] for F, l in zip(Fs, labels)])
     y = np.concatenate([l[::step][np.isin(l[::step], STATES)] for l in labels])
+    w = None
+    if weight_power:
+        w = np.concatenate([run_weights(l, weight_power)[::step][np.isin(l[::step], STATES)] for l in labels])
+        w = w / w.mean()
     clf = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.06, max_leaf_nodes=31,
                                          l2_regularization=1.0, random_state=seed)
-    clf.fit(X, y)
+    clf.fit(X, y, sample_weight=w)
     return clf
 
 

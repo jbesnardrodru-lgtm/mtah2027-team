@@ -46,6 +46,20 @@ def prep(F, cols, mu=None, sd=None):
     return X, mu, sd
 
 
+WEIGHT_POWER = float(os.environ.get("SEQ_WPOW", 0))     # 0 = every frame equal; 1 = every possession equal
+
+
+def run_weight(label):
+    w = np.zeros(len(label), np.float32)
+    s = 0
+    for i in range(1, len(label) + 1):
+        if i == len(label) or label[i] != label[s]:
+            w[s:i] = (1.0 / (i - s)) ** WEIGHT_POWER if label[s] in STATES else 0.0
+            s = i
+    w = w[::STEP]
+    return w / max(w[w > 0].mean(), 1e-9) if (w > 0).any() else w
+
+
 def target(label):
     y = np.full(len(label), -100, np.int64)
     for i, s in enumerate(STATES):
@@ -53,21 +67,24 @@ def target(label):
     return y[::STEP]
 
 
-def train(Xs, ys, n_in, epochs=30, seed=0):
+def train(Xs, ys, n_in, epochs=30, seed=0, ws=None):
     torch.manual_seed(seed); rng = np.random.default_rng(seed)
     net = TCN(n_in)
     opt = torch.optim.AdamW(net.parameters(), lr=2e-3, weight_decay=1e-2)
-    lossf = nn.CrossEntropyLoss(ignore_index=-100)
+    lossf = nn.CrossEntropyLoss(ignore_index=-100, reduction="none")
+    ws = ws or [np.ones(len(y), np.float32) for y in ys]
     n_steps = sum(len(x) for x in Xs) // CROP * 2
     for ep in range(epochs):
         net.train(); tot = 0
         for _ in range(max(1, n_steps // 16)):
-            xb, yb = [], []
+            xb, yb, wb = [], [], []
             for _ in range(16):
                 k = rng.integers(len(Xs)); s = rng.integers(0, len(Xs[k]) - CROP)
-                xb.append(Xs[k][s:s + CROP].T); yb.append(ys[k][s:s + CROP])
-            xb = torch.tensor(np.stack(xb)); yb = torch.tensor(np.stack(yb))
-            loss = lossf(net(xb), yb)
+                xb.append(Xs[k][s:s + CROP].T); yb.append(ys[k][s:s + CROP]); wb.append(ws[k][s:s + CROP])
+            xb = torch.tensor(np.stack(xb)); yb = torch.tensor(np.stack(yb)); wb = torch.tensor(np.stack(wb))
+            l_ = lossf(net(xb), yb)
+            m_ = (yb != -100).float()
+            loss = (l_ * wb * m_).sum() / (m_.sum() + 1e-9)
             opt.zero_grad(); loss.backward(); opt.step(); tot += loss.item()
     return net
 
@@ -94,13 +111,15 @@ def final(seed, epochs=None, augmented=True):
     del allX
     Xs = [prep(G[k][0], cols, mu, sd)[0] for k in G]
     ys = [target(G[k][2]) for k in G]
+    ws = [run_weight(G[k][2]) for k in G]
     del G
-    net = train(Xs, ys, len(cols), epochs, seed=seed)
+    net = train(Xs, ys, len(cols), epochs, seed=seed, ws=ws)
     d = np.load("data/cache/final_inputs.npz")
     F = d["F"]
     X = (F[::STEP] - mu) / sd
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0).clip(-6, 6).astype(np.float32)
-    out = f"data/cache/seq_final{'_aug' if augmented else ''}_s{seed}.npy"
+    wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
+    out = f"data/cache/seq_final{'_aug' if augmented else ''}{wtag}_s{seed}.npy"
     np.save(out, predict(net, X, len(F)).astype(np.float32))
     open(out + ".inputs", "w").write(inputs_fingerprint())
     return out
@@ -121,11 +140,13 @@ def aug_fold(test, seed, epochs=10):
     del allX
     Xs = [prep(G[n][0], cols, mu, sd)[0] for n in names]
     ys = [target(G[n][2]) for n in names]
+    ws = [run_weight(G[n][2]) for n in names]
     del G
-    net = train(Xs, ys, len(cols), epochs, seed=seed)
+    net = train(Xs, ys, len(cols), epochs, seed=seed, ws=ws)
     F = get(f"G{test}")[0]
     Xt, _, _ = prep(F, cols, mu, sd)
-    out = f"data/cache/aug_seq{'' if seed == 0 else f's{seed}'}_P{test}.npy"
+    wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
+    out = f"data/cache/aug_seq{wtag}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
     np.save(out, predict(net, Xt, len(F)).astype(np.float32))
     return out
 

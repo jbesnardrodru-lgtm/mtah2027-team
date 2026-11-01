@@ -47,7 +47,8 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | v7 | + broadcast ball (not measurable in the lab) | 0.595 |
 | v8 | blend 50/50 of v7 with a temporal CNN (3 seeds averaged, sees ±12 s at 12.5 steps/s), switch cost 10 | 0.611 |
 | v9 | v8, but the CNNs trained on 3 differently-degraded copies of each external match (noise augmentation); probabilities rounded to 3 decimals | 0.629 (0.646 / 0.650 / 0.592) |
-| **v10 (current best)** | v9 + better video ball linking (mid-gap tracks): 31% of lost-ball frames recovered instead of 19%; ball visible 75% of the match | lab-equivalent est. +0.005-0.01 (see below); 98.6% of frames as v9 |
+| v10 | v9 + better video ball linking (mid-gap tracks): 31% of lost-ball frames recovered instead of 19%; ball visible 75% of the match | lab-equivalent est. +0.005-0.01 (see below); 98.6% of frames as v9 |
+| **v11 (current best)** | v10 + every possession counts equally in training (frame weight = 1 / length of its run, both models), as spellF1 counts them | **0.644** (0.665 / 0.644 / 0.624); < 2 s recovered 14% -> 22%, 2-5 s 48% -> 57% |
 
 ### What a recovered ball is worth (lab simulation, 1 Nov) — `possession/exp_recover.py`
 Recover a share of every gap from its edges; a share of the recovered stretches deliberately WRONG (5-25 m off):
@@ -111,6 +112,7 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 | "If the ball goes back, it was not a change" rule | contradicts the official answer key (all its short possessions are A-H-A) |
 
 ## 6. What we know about the errors
+(Numbers below are from v6-v9; v11 recovers short possessions much better: see the results table.)
 - We find ~78% as many possessions as truly exist. **Short possessions are the gap**: recovered 14% (<2 s),
   41% (2–5 s), 68% (5–15 s), 78% (>15 s). Possessions under 5 s are ~44% of all possessions.
 - Timing has **no systematic bias** (median offset ~0 s for all change types); team-to-team changes spread ±0.5 s.
@@ -132,7 +134,7 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 ```bash
 sh make_submission.sh <team_name>      # writes evaluation/results/<team_name>.csv and prints its checksum
 ```
-Verified 1 Nov on Jorge's Mac: reproduces team_v10.csv byte-for-byte (md5 01c44e533d55d48bf720b93875d92cf8).
+Verified 1 Nov on Jorge's Mac: reproduces team_v11.csv byte-for-byte (md5 005dd39da68f83c15c4853861699de31).
 Sequence-model outputs carry a fingerprint of their inputs; the blend refuses stale ones.
 From scratch (empty data/cache, no models) it takes ~15-20 h on a laptop CPU, almost all in the video stage.
 Second-machine test (Boris): fresh clone + data bundle + `sh make_submission.sh <team>`; the md5 must match.

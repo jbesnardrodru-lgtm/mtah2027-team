@@ -23,13 +23,14 @@ def main():
     ap.add_argument("--video", nargs="?", const="data/cache/ball_video_cpu.npz", default=None,
                     help="fill tracking gaps with the linked video ball (default: reproducible CPU version)")
     ap.add_argument("--broadcast", action="store_true", help="fill remaining gaps with the synced broadcast ball")
+    ap.add_argument("--wpow", type=float, default=0.0, help="1 = every possession counts equally in training (v11)")
     a = ap.parse_args()
 
     from possession.featcache import get
     from possession.exp_dead import columns
     games = [get(f"G{g}") for g in (1, 2, 3)]        # built (and cached) from scratch if missing
     cols = columns(games[0][1], "v3")
-    clf = fit([g[0][:, cols] for g in games], [g[2] for g in games], step=4)
+    clf = fit([g[0][:, cols] for g in games], [g[2] for g in games], step=4, weight_power=a.wpow)
 
     P, ball, team = load("tactical")
     if a.video:
