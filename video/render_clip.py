@@ -18,11 +18,13 @@ def head_marker(img, Mf, x, y, side):
     perspective: pixels per metre measured from the homography at the player's position."""
     u, v = project(Mf, x, y)
     u2, v2 = project(Mf, x, y + 1 / 68.0)
-    ppm = max(4.0, float(np.hypot(u2 - u, v2 - v)))
-    top = v - 2.3 * ppm
-    pts = np.array([[u, top + 0.5 * ppm], [u - 0.35 * ppm, top], [u + 0.35 * ppm, top]], np.int32)
+    ppm = float(np.hypot(u2 - u, v2 - v))
+    half_w = max(11.0, 0.45 * ppm)          # in full-resolution pixels; the clip is shown at 2/3 size
+    height = max(16.0, 0.65 * ppm)
+    tip = v - max(48.0, 2.2 * ppm)          # tip of the triangle, just above the head
+    pts = np.array([[u, tip], [u - half_w, tip - height], [u + half_w, tip - height]], np.int32)
     cv2.fillPoly(img, [pts], (255, 255, 255) if side == 0 else (0, 0, 0))
-    cv2.polylines(img, [pts], True, (0, 0, 0) if side == 0 else (255, 255, 255), 1)
+    cv2.polylines(img, [pts], True, (0, 0, 0) if side == 0 else (255, 255, 255), 2, cv2.LINE_AA)
 
 
 class Writer:
