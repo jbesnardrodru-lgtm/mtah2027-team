@@ -1,7 +1,10 @@
-"""v8: blend the gradient-boosting probabilities (v7) with the average of 3 sequence models, then decode.
-Lab (3 external matches): v7 0.595 -> blend 0.611 spellF1, switching cost 10 (python -m possession.exp_seq_score bens).
+"""v9: blend the gradient-boosting probabilities (v7) with the average of 3 sequence models trained on
+noise-augmented data (3 degraded copies of each external match), then decode.
+Lab (3 external matches): v7 0.595 -> v8 0.611 -> v9 0.629 spellF1, switching cost 10.
+Probabilities are rounded to 3 decimals before decoding, so microscopic numeric differences between
+computers cannot flip a decision (reproducibility).
 
-    python -m possession.blend --name team_v8
+    python -m possession.blend --name team_v9            (v8: add --original)
 Needs data/cache/final_inputs.npz (possession.submit) and data/cache/seq_final_s{0,1,2}.npy (possession.seq final).
 """
 import argparse, os, sys
@@ -18,12 +21,14 @@ SEEDS = (0, 1, 2)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--name", default="team_v8")
+    ap.add_argument("--name", default="team_v9")
+    ap.add_argument("--original", action="store_true", help="v8: sequence models without noise augmentation")
     a = ap.parse_args()
     d = np.load(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     p_gb, segs = d["p_gb"], [tuple(x) for x in d["segs"]]
-    p_seq = np.mean([np.load(os.path.join(ROOT, "data", "cache", f"seq_final_s{s}.npy")) for s in SEEDS], 0)
-    p = 0.5 * p_gb + 0.5 * p_seq
+    tag = "" if a.original else "_aug"
+    p_seq = np.mean([np.load(os.path.join(ROOT, "data", "cache", f"seq_final{tag}_s{s}.npy")) for s in SEEDS], 0)
+    p = np.round(0.5 * p_gb + 0.5 * p_seq, 3)
     p[segs[1][0]:SECOND_HALF_KICKOFF] = [0, 0, 1]
     labels = decode(p, segs, SWITCH_HA, SWITCH_D)
     out = os.path.join(ROOT, "evaluation", "results", a.name + ".csv")

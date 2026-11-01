@@ -21,7 +21,9 @@ def get(name, rebuild=False):
     elif name.startswith("G"):
         uniform = name.endswith("u")
         miss = float(name.split("m")[1]) / 100 if "m" in name else 0.41   # e.g. G1m27 = 27% ball missing
-        F, names, label = lab_game(int(name[1:2]), seed=100 if uniform else 0,
+        rep = int(name.split("r")[1]) if "r" in name else 0                 # e.g. G1r2 = 2nd extra noisy copy
+        seed = 100 if uniform else 1000 * rep
+        F, names, label = lab_game(int(name[1:2]), seed=seed,
                                    placement="uniform" if uniform else "weighted", target_missing=miss)
     else:
         P, ball, team = load("tactical")

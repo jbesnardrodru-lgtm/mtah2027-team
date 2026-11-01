@@ -82,10 +82,13 @@ def predict(net, X, n_frames):
     return up
 
 
-def final(seed, epochs=20):
-    """Train on all three external games, predict our match (features saved by possession.submit)."""
-    G = {k: get(f"G{k}") for k in (1, 2, 3)}
-    cols = columns(G[1][1], "v3")
+def final(seed, epochs=None, augmented=True):
+    """Train on all three external games, predict our match (features saved by possession.submit).
+    augmented=True (v9): each game in 3 differently-degraded copies, 7 epochs (same training effort as the lab)."""
+    names = [f"G{k}{suf}" for k in (1, 2, 3) for suf in (("", "r1", "r2") if augmented else ("",))]
+    epochs = epochs or (7 if augmented else 20)
+    G = {k: get(k) for k in names}
+    cols = columns(G[names[0]][1], "v3")
     allX = np.vstack([G[k][0][::STEP][:, cols] for k in G])
     mu = np.nanmean(allX, 0); sd = np.nanstd(allX, 0) + 1e-6
     del allX
@@ -97,10 +100,34 @@ def final(seed, epochs=20):
     F = d["F"]
     X = (F[::STEP] - mu) / sd
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0).clip(-6, 6).astype(np.float32)
-    out = f"data/cache/seq_final_s{seed}.npy"
+    out = f"data/cache/seq_final{'_aug' if augmented else ''}_s{seed}.npy"
     np.save(out, predict(net, X, len(F)).astype(np.float32))
     return out
 
+
+def aug_fold(test, seed, epochs=10):
+    """Lab fold with noise-augmented training (3 noisy copies per training match, same total training steps)."""
+    names = [f"G{k}{suf}" for k in (1, 2, 3) if k != test for suf in ("", "r1", "r2")]
+    G = {n: get(n) for n in names}
+    cols = columns(get("G1")[1], "v3")
+    allX = np.vstack([G[n][0][::STEP][:, cols] for n in names])
+    mu = np.nanmean(allX, 0); sd = np.nanstd(allX, 0) + 1e-6
+    del allX
+    Xs = [prep(G[n][0], cols, mu, sd)[0] for n in names]
+    ys = [target(G[n][2]) for n in names]
+    del G
+    net = train(Xs, ys, len(cols), epochs, seed=seed)
+    F = get(f"G{test}")[0]
+    Xt, _, _ = prep(F, cols, mu, sd)
+    out = f"data/cache/aug_seq{'' if seed == 0 else f's{seed}'}_P{test}.npy"
+    np.save(out, predict(net, Xt, len(F)).astype(np.float32))
+    return out
+
+
+if __name__ == "__main__" and sys.argv[1] == "aug":
+    t0 = time.time()
+    print("saved", aug_fold(int(sys.argv[2]), int(sys.argv[3]) if len(sys.argv) > 3 else 0), f"in {time.time()-t0:.0f}s")
+    sys.exit(0)
 
 if __name__ == "__main__" and sys.argv[1] == "final":
     t0 = time.time()

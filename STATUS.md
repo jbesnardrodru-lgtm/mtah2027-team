@@ -45,18 +45,21 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | v5 | + team-reaction features (reversal of nearest players, convergence on a loose ball, defensive-line and sideways movement) | 0.56 |
 | v6 | + third training match | 0.595 |
 | v7 | + broadcast ball (not measurable in the lab) | 0.595 |
-| **v8 (current best)** | blend 50/50 of v7 with a temporal CNN (3 seeds averaged, sees ±12 s at 12.5 steps/s), switch cost 10 | **0.611** |
+| v8 | blend 50/50 of v7 with a temporal CNN (3 seeds averaged, sees ±12 s at 12.5 steps/s), switch cost 10 | 0.611 |
+| **v9 (current best)** | v8, but the CNNs trained on 3 differently-degraded copies of each external match (noise augmentation); probabilities rounded to 3 decimals | **0.629** (0.646 / 0.650 / 0.592) |
 
-Current best submission: `evaluation/results/team_v8.csv` (not in git). Regenerate:
+Current best submission: `evaluation/results/team_v9.csv` (not in git). Regenerate:
 ```bash
+python -m possession.featcache G1r1 G2r1 G3r1 G1r2 G2r2 G3r2       # extra noisy copies (once)
 python -m possession.submit --name team_v7 --video --broadcast   # v7 + saves final_inputs.npz
 python -m possession.seq final 0 && python -m possession.seq final 1 && python -m possession.seq final 2   # ~2.5 min each
-python -m possession.blend --name team_v8
+python -m possession.blend --name team_v9
 ```
-300 possessions, 30% dead time (incl. the published pre-kickoff block). Lab per match: 0.631 / 0.631 / 0.573
-vs v7 0.602 / 0.609 / 0.573. Deterministic (re-run gives a byte-identical sequence-model output).
-Caveat: on our match the sequence model is stickier than gradient boosting (335 vs 374 possessions at the
-same setting) while in the lab they agree (304 vs 302) -> some domain sensitivity. v7 is the fallback.
+288 possessions, 31% dead time (incl. the published pre-kickoff block). Lab: v7 0.595 -> v8 0.611 -> v9 0.629,
+each step improving all three matches. Noise augmentation helps the CNN (single run 0.566 -> 0.597) but not
+gradient boosting (0.595 -> 0.593). Caveat: on our match the CNNs are stickier than gradient boosting
+(302 vs 374 possessions at the same setting; in the lab the ratio is 0.91, here 0.81) -> some domain
+sensitivity. v7 is the fallback.
 v7 = v6 + broadcast ball (see below); 96.5% of frames identical to v6.
 
 ### Broadcast feed (added 31 Oct)
