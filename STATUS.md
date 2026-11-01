@@ -116,6 +116,16 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 | Final reproducibility run on a second machine (~12 November) | Boris | must give a byte-identical CSV |
 
 ## 8. How to run
+
+**One command, data bundle -> final CSV** (each stage skipped if its output exists, so it resumes):
+```bash
+sh make_submission.sh <team_name>      # writes evaluation/results/<team_name>.csv and prints its checksum
+```
+Verified 1 Nov on Jorge's Mac: reproduces team_v9.csv byte-for-byte (md5 a70399a0...).
+From scratch (empty data/cache, no models) it takes ~15-20 h on a laptop CPU, almost all in the video stage.
+Second-machine test (Boris): fresh clone + data bundle + `sh make_submission.sh <team>`; the md5 must match.
+
+Individual steps:
 ```bash
 python -m possession.cache tactical            # tracking -> data/cache (once)
 python -m possession.featcache G1 G2 G3        # lab features (once)
