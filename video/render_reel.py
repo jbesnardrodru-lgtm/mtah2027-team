@@ -10,6 +10,21 @@ from common import ROOT, asset_paths, homography, project, half_video_blocks, GA
 from render_clip import Writer, COL, TXT, head_marker
 
 
+def suspect_segments(total_s, min_len=8, pad=25, min_err=8.0):
+    """Live-play moments where our detector and the broadcast disagree by > min_err metres."""
+    err = np.load(os.path.join(ROOT, "data", "cache", "detector_err.npy"))
+    lab = pd.read_csv(os.path.join(ROOT, "evaluation", "results", "team_v11.csv")).label.values
+    bad = (np.nan_to_num(err) > min_err) & np.isin(lab, ["H", "A"])
+    e = np.diff(np.r_[0, bad.astype(int), 0]); st, en = np.flatnonzero(e == 1), np.flatnonzero(e == -1)
+    runs = sorted([(b - a, a, b) for a, b in zip(st, en) if b - a >= min_len], reverse=True)
+    chosen, used = [], 0
+    for L, a, b in runs:
+        if used >= total_s * 25:
+            break
+        chosen.append((max(0, a - pad), b + pad)); used += b - a + 2 * pad
+    return sorted(chosen)
+
+
 def segments(total_s, min_len=10, pad=25):
     t = np.load(os.path.join(ROOT, "data", "cache", "tactical.npz"))["ball"]
     v = np.load(os.path.join(ROOT, "data", "cache", "ball_video_cpu_v2.npz"))["ball"]
@@ -31,15 +46,17 @@ def segments(total_s, min_len=10, pad=25):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=90)
+    ap.add_argument("--suspect", action="store_true", help="moments where our detector and the broadcast disagree")
     a = ap.parse_args()
-    segs = segments(a.seconds)
+    segs = suspect_segments(a.seconds) if a.suspect else segments(a.seconds)
+    bball = np.load(os.path.join(ROOT, "data", "cache", "broadcast_mapped.npz"))["ball"]
     lab = pd.read_csv(os.path.join(ROOT, "evaluation", "results", "team_v11.csv")).label.values
     d = np.load(os.path.join(ROOT, "data", "cache", "tactical.npz")); P, tball, team = d["P"], d["ball"], d["team"]
     vball = np.load(os.path.join(ROOT, "data", "cache", "ball_video_cpu_v2.npz"))["ball"]
     M, _ = homography()
     blocks = {h: (s, e) for h, s, e in half_video_blocks(GAME)}
     os.makedirs(os.path.join(ROOT, "data", "clips"), exist_ok=True)
-    out = os.path.join(ROOT, "data", "clips", "yellow_reel.mp4")
+    out = os.path.join(ROOT, "data", "clips", "suspect_reel.mp4" if a.suspect else "yellow_reel.mp4")
     W, H = 1280, 720
     writer = Writer(out, W, H)
     import av
@@ -64,6 +81,8 @@ def main():
                     u, v = project(M[idx], tball[idx, 0], tball[idx, 1]); cv2.circle(img, (int(u), int(v)), 16, (0, 220, 0), 3)
                 elif not np.isnan(vball[idx, 0]):
                     u, v = project(M[idx], vball[idx, 0], vball[idx, 1]); cv2.circle(img, (int(u), int(v)), 16, (0, 220, 255), 4)
+                if a.suspect and np.isnan(tball[idx, 0]) and not np.isnan(bball[idx, 0]):
+                    u, v = project(M[idx], bball[idx, 0], bball[idx, 1]); cv2.circle(img, (int(u), int(v)), 22, (255, 220, 0), 3)
                 img = cv2.resize(img, (W, H))
                 L = lab[idx]
                 cv2.rectangle(img, (0, 0), (W, 56), COL[L], -1)
@@ -72,7 +91,8 @@ def main():
                 mm = (idx - blocks[h][0] - (0 if h == 1 else 2934)) / 1500
                 cv2.putText(img, f"moment {k+1}/{len(segs)}   half {h} {int(mm):02d}:{int((mm % 1) * 60):02d}", (W - 520, 38),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                cv2.putText(img, "green = organisers' tracking   yellow = OUR detector   triangles: white Barca, black Athletic",
+                cv2.putText(img, ("SUSPECTS  yellow = OUR detector   cyan (bigger) = broadcast camera   green = tracking" if a.suspect else
+                             "green = organisers' tracking   yellow = OUR detector   triangles: white Barca, black Athletic"),
                             (20, H - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                 writer.write(img); written += 1
     writer.close()
