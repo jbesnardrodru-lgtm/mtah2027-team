@@ -4,4 +4,5 @@ pandas>=2.2
 scikit-learn>=1.5
 scipy>=1.11
 orjson>=3.9    # fast JSON for the PFF reader (optional; falls back to json)
-# video layer: see video/requirements.txt
+# (the video layer is no longer part of the submission, see STATUS.md)
+torch>=2.2       # sequence models (possession/seq.py), CPU is enough
