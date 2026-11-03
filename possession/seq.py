@@ -16,6 +16,7 @@ STEP = int(os.environ.get("SEQ_STEP", 2))     # 25 fps -> 25/STEP steps per seco
 CROP = int(os.environ.get("SEQ_CROP", 1024))   # training crop length (steps)
 DIL = tuple(int(x) for x in os.environ.get("SEQ_DIL", "1,2,4,8,16,32").split(","))
 TAG = os.environ.get("SEQ_TAG", "")
+EXTRA = os.environ.get("SEQ_EXTRA", "")      # "DFL": add the Bundesliga matches to the lab folds
 torch.set_num_threads(4)
 
 
@@ -133,6 +134,9 @@ def inputs_fingerprint(path="data/cache/final_inputs.npz"):
 def aug_fold(test, seed, epochs=10):
     """Lab fold with noise-augmented training (3 noisy copies per training match, same total training steps)."""
     names = [f"G{k}{suf}" for k in (1, 2, 3) if k != test for suf in ("", "r1", "r2")]
+    if EXTRA == "DFL":                         # + the 7 Bundesliga matches, provider flags as labels (exp_dfl)
+        from possession.dfl import MATCHES
+        names += [f"DFL{m}" for m in MATCHES]
     G = {n: get(n) for n in names}
     cols = columns(get("G1")[1], "v3")
     allX = np.vstack([G[n][0][::STEP][:, cols] for n in names])
@@ -146,7 +150,7 @@ def aug_fold(test, seed, epochs=10):
     F = get(f"G{test}")[0]
     Xt, _, _ = prep(F, cols, mu, sd)
     wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
-    out = f"data/cache/aug_seq{wtag}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
+    out = f"data/cache/aug_seq{wtag}{'_dfl' if EXTRA else ''}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
     np.save(out, predict(net, Xt, len(F)).astype(np.float32))
     return out
 
