@@ -1,5 +1,5 @@
 #!/bin/sh
-# One command: organisers' data bundle -> final submission CSV (v12).
+# One command: organisers' data bundle -> final submission CSV (v13).
 #
 #   sh make_submission.sh <team_name>
 #
@@ -43,7 +43,7 @@ for s in 0 1 2; do
 done
 
 step "6/6 blend -> evaluation/results/${TEAM}.csv"
-python -m possession.blend --name "$TEAM" --wpow 1
+python -m possession.blend --name "$TEAM" --wpow 1 --wgb 0.4
 python evaluation/validate_submission.py "evaluation/results/${TEAM}.csv"
 echo
 echo "checksum (must be identical on every machine):"

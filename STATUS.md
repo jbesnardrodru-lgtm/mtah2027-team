@@ -54,7 +54,9 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | v8 | blend 50/50 of v7 with a temporal CNN (3 seeds averaged, sees ±12 s at 12.5 steps/s), switch cost 10 | 0.611 |
 | v9 | v8, but the CNNs trained on 3 differently-degraded copies of each external match (noise augmentation); probabilities rounded to 3 decimals | 0.629 (0.646 / 0.650 / 0.592) |
 | v10 | v9 + better video ball linking (mid-gap tracks): 31% of lost-ball frames recovered instead of 19%; ball visible 75% of the match | lab-equivalent est. +0.005-0.01 (see below); 98.6% of frames as v9 |
-| **v11 (current best)** | v10 + every possession counts equally in training (frame weight = 1 / length of its run, both models), as spellF1 counts them | **0.644** (0.665 / 0.644 / 0.624); < 2 s recovered 14% -> 22%, 2-5 s 48% -> 57% |
+| v11 | v10 + every possession counts equally in training (frame weight = 1 / length of its run, both models), as spellF1 counts them | **0.644** (0.665 / 0.644 / 0.624); < 2 s recovered 14% -> 22%, 2-5 s 48% -> 57% |
+| v12 | v11 without the video ball layer (detector was trained on the provided video: not allowed after the 3 Nov clarification) | 0.644 (lab has no video) |
+| **v13 (current best)** | v12 with blend weight 0.4 gradient boosting / 0.6 CNN, chosen in the lab (all 3 folds improve) | **0.655** (0.679 / 0.653 / 0.632) |
 
 ### What a recovered ball is worth (lab simulation, 1 Nov) — `possession/exp_recover.py`
 Recover a share of every gap from its edges; a share of the recovered stretches deliberately WRONG (5-25 m off):
@@ -113,6 +115,7 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 | Time-shifted copies of key features | 0.586 |
 | Smaller / bigger classifier | 0.573 / 0.588: current size is the sweet spot |
 | Self-training on the test match | 0.587 |
+| Two-pass local re-decode (insert the other team where its probability stays > thr for >= L frames inside a possession) | never better than 0.644; low thresholds 0.612-0.637 (spurious possessions). The Viterbi does not flatten confident blocks (`possession/exp_redecode.py`) |
 | Ensemble of 4 models | 0.592 (macroF1 +0.005) |
 | Removing ball-visibility features | no effect on the dead-ball pattern |
 | Off-the-shelf ball detector | too inaccurate (50% within 25 px); replaced by the fine-tuned one |

@@ -27,6 +27,7 @@ def main():
     ap.add_argument("--name", default="team_v9")
     ap.add_argument("--original", action="store_true", help="v8: sequence models without noise augmentation")
     ap.add_argument("--wpow", type=float, default=0.0, help="1 = possession-weighted sequence models (v11)")
+    ap.add_argument("--wgb", type=float, default=0.5, help="weight of gradient boosting in the blend (v13: 0.4, chosen in the lab)")
     a = ap.parse_args()
     d = np.load(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     p_gb, segs = d["p_gb"], [tuple(x) for x in d["segs"]]
@@ -38,7 +39,7 @@ def main():
         if not os.path.exists(side) or open(side).read() != fp:
             raise SystemExit(f"sequence model {s_} was computed from different inputs: re-run python -m possession.seq final {s_}")
     p_seq = np.mean([np.load(os.path.join(ROOT, "data", "cache", f"seq_final{tag}_s{s}.npy")) for s in SEEDS], 0)
-    p = np.round(0.5 * p_gb + 0.5 * p_seq, 3)
+    p = np.round(a.wgb * p_gb + (1 - a.wgb) * p_seq, 3)
     p[segs[1][0]:SECOND_HALF_KICKOFF] = [0, 0, 1]
     labels = decode(p, segs, SWITCH_HA, SWITCH_D)
     out = os.path.join(ROOT, "evaluation", "results", a.name + ".csv")
