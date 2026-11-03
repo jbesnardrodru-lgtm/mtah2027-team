@@ -56,7 +56,8 @@ tracking (+ video ball) ──► features (possession/features.py, ~100 per fra
 | v10 | v9 + better video ball linking (mid-gap tracks): 31% of lost-ball frames recovered instead of 19%; ball visible 75% of the match | lab-equivalent est. +0.005-0.01 (see below); 98.6% of frames as v9 |
 | v11 | v10 + every possession counts equally in training (frame weight = 1 / length of its run, both models), as spellF1 counts them | **0.644** (0.665 / 0.644 / 0.624); < 2 s recovered 14% -> 22%, 2-5 s 48% -> 57% |
 | v12 | v11 without the video ball layer (detector was trained on the provided video: not allowed after the 3 Nov clarification) | 0.644 (lab has no video) |
-| **v13 (current best)** | v12 with blend weight 0.4 gradient boosting / 0.6 CNN, chosen in the lab (all 3 folds improve) | **0.655** (0.679 / 0.653 / 0.632) |
+| v13 | v12 with blend weight 0.4 gradient boosting / 0.6 CNN, chosen in the lab (all 3 folds improve) | **0.655** (0.679 / 0.653 / 0.632) |
+| **v14 (current best)** | v13 + the CNNs also trained on the 7 DFL/IDSSE Bundesliga matches (provider flags as labels); gradient boosting unchanged (Metrica only), blend 0.4/0.6 | **0.676** (0.701 / 0.681 / 0.645), every fold up; 2-5 s possessions 58% -> 67% (`possession/run_dfl_seq.sh`) |
 
 ### What a recovered ball is worth (lab simulation, 1 Nov) — `possession/exp_recover.py`
 Recover a share of every gap from its edges; a share of the recovered stretches deliberately WRONG (5-25 m off):
@@ -115,7 +116,7 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 | Time-shifted copies of key features | 0.586 |
 | Smaller / bigger classifier | 0.573 / 0.588: current size is the sweet spot |
 | Self-training on the test match | 0.587 |
-| DFL/IDSSE Bundesliga (7 matches, CC-BY 4.0) in training, gradient boosting only (`possession/dfl.py`, `exp_dfl.py`) | provider flags as labels: 0.605 -> 0.610 but mixed (G1 +0.023, G2 -0.039, G3 +0.031); flags give 41-52% dead and 340-477 possessions/90 vs Metrica 25-34% and 300-354. Labels rebuilt from DFL events with our Metrica logic: worse (0.556 / 0.556), event times jitter +-1-2 s; event logic snapped to the flag times: 0.597 / 0.580; DFL only for H/A: worse. Not adopted (yet): not all 3 folds improve |
+| DFL/IDSSE Bundesliga (7 matches, CC-BY 4.0) in training, gradient boosting only (`possession/dfl.py`, `exp_dfl.py`) | provider flags as labels: 0.605 -> 0.610 but mixed (G1 +0.023, G2 -0.039, G3 +0.031); flags give 41-52% dead and 340-477 possessions/90 vs Metrica 25-34% and 300-354. Labels rebuilt from DFL events with our Metrica logic: worse (0.556 / 0.556), event times jitter +-1-2 s; event logic snapped to the flag times: 0.597 / 0.580; DFL only for H/A: worse. Gradient boosting with DFL not adopted (mixed). CNNs with DFL ADOPTED in v14 (see table) |
 | Two-pass local re-decode (insert the other team where its probability stays > thr for >= L frames inside a possession) | never better than 0.644; low thresholds 0.612-0.637 (spurious possessions). The Viterbi does not flatten confident blocks (`possession/exp_redecode.py`) |
 | Ensemble of 4 models | 0.592 (macroF1 +0.005) |
 | Removing ball-visibility features | no effect on the dead-ball pattern |
