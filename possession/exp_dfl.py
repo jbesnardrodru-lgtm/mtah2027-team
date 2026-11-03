@@ -17,13 +17,18 @@ if sys.argv[1] == "feats":
 test, mode = int(sys.argv[1]), sys.argv[2]
 cols = columns(get("G1")[1], "v3")
 Fs, Ls = [], []
-if mode in ("metrica", "both", "teamonly"):
+if mode in ("metrica", "both", "teamonly", "ev", "evnooba", "snap"):
     for k in (1, 2, 3):
         if k != test:
             F, _, l = get(f"G{k}"); Fs.append(F[:, cols]); Ls.append(l)
-if mode in ("both", "dfl", "teamonly"):
+if mode in ("both", "dfl", "teamonly", "ev", "evnooba", "snap"):
+    from possession.dfl import event_labels, snapped_labels
     for m in MATCHES:
         F, _, l = get(f"DFL{m}")
+        if mode in ("ev", "evnooba"):                # labels rebuilt from the DFL events with our Metrica logic
+            l = event_labels(m, other_ball_action=(mode == "ev"))
+        if mode == "snap":
+            l = snapped_labels(m)
         if mode == "teamonly":                       # DFL teaches only who has the ball; dead ball from Metrica only
             l = np.where(l == "D", "X", l)
         Fs.append(F[:, cols]); Ls.append(l)

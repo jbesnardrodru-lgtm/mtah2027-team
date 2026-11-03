@@ -115,6 +115,7 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 | Time-shifted copies of key features | 0.586 |
 | Smaller / bigger classifier | 0.573 / 0.588: current size is the sweet spot |
 | Self-training on the test match | 0.587 |
+| DFL/IDSSE Bundesliga (7 matches, CC-BY 4.0) in training, gradient boosting only (`possession/dfl.py`, `exp_dfl.py`) | provider flags as labels: 0.605 -> 0.610 but mixed (G1 +0.023, G2 -0.039, G3 +0.031); flags give 41-52% dead and 340-477 possessions/90 vs Metrica 25-34% and 300-354. Labels rebuilt from DFL events with our Metrica logic: worse (0.556 / 0.556), event times jitter +-1-2 s; event logic snapped to the flag times: 0.597 / 0.580; DFL only for H/A: worse. Not adopted (yet): not all 3 folds improve |
 | Two-pass local re-decode (insert the other team where its probability stays > thr for >= L frames inside a possession) | never better than 0.644; low thresholds 0.612-0.637 (spurious possessions). The Viterbi does not flatten confident blocks (`possession/exp_redecode.py`) |
 | Ensemble of 4 models | 0.592 (macroF1 +0.005) |
 | Removing ball-visibility features | no effect on the dead-ball pattern |
