@@ -16,7 +16,7 @@ def get(name, rebuild=False):
     if os.path.exists(path) and not rebuild:
         d = np.load(path, allow_pickle=True)
         return d["F"], list(d["names"]), d["label"]
-    if name.startswith("PFF"):
+    if name.startswith("PFF") or name.startswith("DFL"):
         F, names, label = lab_game(name)
     elif name.startswith("G"):
         uniform = name.endswith("u")

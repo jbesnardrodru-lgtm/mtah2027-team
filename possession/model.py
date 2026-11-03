@@ -33,6 +33,10 @@ def lab_game(g, noisy=True, seed=0, noise_v=None, placement="weighted", target_m
         from possession.pff import load_pff
         P, ball, team, label, period = load_pff(int(g[3:]))
         g = int(g[3:]) % 1000
+    elif isinstance(g, str) and g.startswith("DFL"):
+        from possession.dfl import load_dfl, MATCHES
+        P, ball, team, label, period = load_dfl(g[3:])
+        g = 500 + MATCHES.index(g[3:])
     else:
         P, ball, team, label, period = load_game(g)
     if noisy:
