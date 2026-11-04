@@ -134,6 +134,18 @@ stays the submission. Scripts: possession/pff_prepare.py, exp_pff.py, exp_pff_sc
 - Modelling is saturated at ~0.595 with 3 training matches: the next gain needs **more training data**.
 
 ## 7. Open tasks
+
+### Next: close the lab -> our-match gap (planned 4 Nov, in this order)
+Diagnostic (no labels, never used to choose): on our match the GB and the CNN agree on 81% of frames vs 86-87% in
+the lab; the 3 CNN seeds agree 84% vs 88-89%; CNN confidence 0.84 vs 0.88-0.90. The model is less sure on our
+tracking. Every fix below is chosen in the LAB only.
+1. **Email the organisers**: may the noise simulator keep its parameters from aggregate statistics of the provided
+   tracking (41% ball missing, smoothing)? Draft in the team chat. If yes, make the simulator more realistic
+   (identity swaps, systematic offsets); if no, recalibrate on external data.
+2. **Test-time augmentation**: predict the match as is and with the teams swapped, average (swapped back). ~2 h CPU.
+3. **5 CNN seeds instead of 3**: steadier ensemble. ~1.5 h CPU (same overnight test as 2).
+4. **PFF World Cup matches (40) in the CNN** (only tested with gradient boosting so far). ~4-6 h, memory is tight.
+
 | Task | Owner | Notes |
 |---|---|---|
 | PFF FC World Cup 2022 (64 matches): **loader written** (`possession/pff.py`, uses kloppy; tested on kloppy's PFF sample). Needs: sign up on the PFF form, download into `data/pff/{metadata,rosters,tracking}/`, run `python -m possession.pff` (sanity) and `python -m possession.lab3 v3 20 PFFALL` (lab with PFF in training) | Boris | PFF labels come from kloppy's ball state + owning team, which mirrors how the official answer key is built |
