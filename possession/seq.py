@@ -153,9 +153,12 @@ def aug_fold(test, seed, epochs=10):
     if VAR == "m50":
         met += [f"G{k}m50" for k in (1, 2, 3) if k != test]
     ext = []
-    if EXTRA == "DFL":                         # + the 7 Bundesliga matches, provider flags as labels (exp_dfl)
+    if "DFL" in EXTRA.split(","):              # + the 7 Bundesliga matches, provider flags as labels (exp_dfl)
         from possession.dfl import MATCHES
         ext = [f"DFL{m}" for m in MATCHES]
+    if "PFF" in EXTRA.split(","):              # + the 40 PFF World Cup 2022 matches (kloppy-logic labels)
+        from possession.pff import list_games
+        ext += [f"PFF{g}" for g in list_games()]
     names = met + ext
     G = {n: get(n) for n in names}
     cols = columns(get("G1")[1], "v3")
@@ -176,7 +179,7 @@ def aug_fold(test, seed, epochs=10):
     F = get(f"G{test}")[0]
     Xt, _, _ = prep(F, cols, mu, sd)
     wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
-    tag = ("_dfl" if EXTRA else "") + (f"_{VAR}" if VAR else "")
+    tag = ("_dfl" if EXTRA else "") + ("_pff" if "PFF" in EXTRA else "") + (f"_{VAR}" if VAR else "")
     out = f"data/cache/aug_seq{wtag}{tag}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
     np.save(out, predict(net, Xt, len(F)).astype(np.float32))
     if os.environ.get("SEQ_TTA"):              # test-time augmentation: also predict the team-swapped test match
