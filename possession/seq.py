@@ -107,6 +107,8 @@ def final(seed, epochs=None, augmented=True):
     augmented=True (v9): each game in 3 differently-degraded copies, 7 epochs (same training effort as the lab)."""
     names = [f"G{k}{suf}" for k in (1, 2, 3) for suf in (("", "r1", "r2") if augmented else ("",))]
     epochs = epochs or (7 if augmented else 20)
+    if VAR == "swap":                          # v15: + every Metrica copy with the two teams exchanged
+        names += [n + "x" for n in names]
     if EXTRA == "DFL":                         # v14: + the 7 Bundesliga matches (provider flags as labels)
         from possession.dfl import MATCHES
         names += [f"DFL{m}" for m in MATCHES]
@@ -125,7 +127,7 @@ def final(seed, epochs=None, augmented=True):
     X = (F[::STEP] - mu) / sd
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0).clip(-6, 6).astype(np.float32)
     wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
-    out = f"data/cache/seq_final{'_aug' if augmented else ''}{wtag}{'_dfl' if EXTRA else ''}_s{seed}.npy"
+    out = f"data/cache/seq_final{'_aug' if augmented else ''}{wtag}{'_dfl' if EXTRA else ''}{f'_{VAR}' if VAR else ''}_s{seed}.npy"
     np.save(out, predict(net, X, len(F)).astype(np.float32))
     open(out + ".inputs", "w").write(inputs_fingerprint())
     return out

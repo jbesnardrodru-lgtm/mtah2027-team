@@ -1,5 +1,5 @@
 #!/bin/sh
-# One command: organisers' data bundle -> final submission CSV (v14).
+# One command: organisers' data bundle -> final submission CSV (v15).
 #
 #   sh make_submission.sh <team_name>
 #
@@ -13,6 +13,7 @@ TEAM="${1:-team}"
 export PYTHONUNBUFFERED=1
 export SEQ_WPOW=1          # v11: every possession counts equally when training the sequence models
 export SEQ_EXTRA=DFL       # v14: the sequence models also learn from the 7 DFL/IDSSE Bundesliga matches (CC-BY 4.0)
+export SEQ_VAR=swap        # v15: ... and from team-swapped copies of the Metrica matches (labels H <-> A)
 cd "$(dirname "$0")"
 step() { echo; echo "== $(date '+%Y-%m-%d %H:%M:%S')  $*"; }
 
@@ -32,8 +33,8 @@ step "2/6 tracking caches"
 [ -f data/cache/tactical.npz ] || python -m possession.cache tactical
 [ -f data/cache/broadcast.npz ] || python -m possession.cache broadcast
 
-step "3/6 lab features: 3 external matches x 3 noisy copies + 7 DFL matches"
-python -m possession.featcache_missing G1 G2 G3 G1r1 G2r1 G3r1 G1r2 G2r2 G3r2 DFLJ03WMX DFLJ03WN1 DFLJ03WOH DFLJ03WOY DFLJ03WPY DFLJ03WQQ DFLJ03WR9
+step "3/6 lab features: 3 external matches x 3 noisy copies (+ team-swapped) + 7 DFL matches"
+python -m possession.featcache_missing G1 G2 G3 G1r1 G2r1 G3r1 G1r2 G2r2 G3r2 G1x G2x G3x G1r1x G2r1x G3r1x G1r2x G2r2x G3r2x DFLJ03WMX DFLJ03WN1 DFLJ03WOH DFLJ03WOY DFLJ03WPY DFLJ03WQQ DFLJ03WR9
 
 step "4/6 gradient-boosting model + broadcast ball"
 python -m possession.submit --name "${TEAM}_gb" --broadcast --wpow 1
@@ -41,11 +42,11 @@ python -m possession.submit --name "${TEAM}_gb" --broadcast --wpow 1
 step "5/6 sequence models (3 seeds)"
 FP=$(python -c "from possession.seq import inputs_fingerprint; print(inputs_fingerprint())")
 for s in 0 1 2; do
-  [ "$(cat data/cache/seq_final_aug_w1_dfl_s$s.npy.inputs 2>/dev/null)" = "$FP" ] || python -m possession.seq final $s
+  [ "$(cat data/cache/seq_final_aug_w1_dfl_swap_s$s.npy.inputs 2>/dev/null)" = "$FP" ] || python -m possession.seq final $s
 done
 
 step "6/6 blend -> evaluation/results/${TEAM}.csv"
-python -m possession.blend --name "$TEAM" --wpow 1 --wgb 0.4 --dfl
+python -m possession.blend --name "$TEAM" --wpow 1 --wgb 0.4 --dfl --var swap
 python evaluation/validate_submission.py "evaluation/results/${TEAM}.csv"
 echo
 echo "checksum (must be identical on every machine):"

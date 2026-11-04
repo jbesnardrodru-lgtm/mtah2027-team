@@ -28,11 +28,12 @@ def main():
     ap.add_argument("--original", action="store_true", help="v8: sequence models without noise augmentation")
     ap.add_argument("--wpow", type=float, default=0.0, help="1 = possession-weighted sequence models (v11)")
     ap.add_argument("--dfl", action="store_true", help="v14: sequence models trained with the DFL matches too")
+    ap.add_argument("--var", default="", help="v15: 'swap' = sequence models also trained on team-swapped copies")
     ap.add_argument("--wgb", type=float, default=0.5, help="weight of gradient boosting in the blend (v13: 0.4, chosen in the lab)")
     a = ap.parse_args()
     d = np.load(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     p_gb, segs = d["p_gb"], [tuple(x) for x in d["segs"]]
-    tag = ("" if a.original else "_aug") + ("" if not a.wpow else f"_w{a.wpow:g}") + ("_dfl" if a.dfl else "")
+    tag = ("" if a.original else "_aug") + ("" if not a.wpow else f"_w{a.wpow:g}") + ("_dfl" if a.dfl else "") + (f"_{a.var}" if a.var else "")
     from possession.seq import inputs_fingerprint
     fp = inputs_fingerprint(os.path.join(ROOT, "data", "cache", "final_inputs.npz"))
     for s_ in SEEDS:
