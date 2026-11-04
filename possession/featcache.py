@@ -16,15 +16,19 @@ def get(name, rebuild=False):
     if os.path.exists(path) and not rebuild:
         d = np.load(path, allow_pickle=True)
         return d["F"], list(d["names"]), d["label"]
+    aug = {}
+    while name[-1] in "xy" and (name.startswith("G") or name.startswith("DFL")):   # x = teams swapped, y = mirrored
+        aug["swap" if name[-1] == "x" else "mirror"] = True
+        name = name[:-1]
     if name.startswith("PFF") or name.startswith("DFL"):
-        F, names, label = lab_game(name)
+        F, names, label = lab_game(name, **aug)
     elif name.startswith("G"):
         uniform = name.endswith("u")
         miss = float(name.split("m")[1]) / 100 if "m" in name else 0.41   # e.g. G1m27 = 27% ball missing
         rep = int(name.split("r")[1]) if "r" in name else 0                 # e.g. G1r2 = 2nd extra noisy copy
-        seed = 100 if uniform else 1000 * rep
+        seed = (100 if uniform else 1000 * rep) + (7 if aug else 0)   # augmented copies get their own noise
         F, names, label = lab_game(int(name[1:2]), seed=seed,
-                                   placement="uniform" if uniform else "weighted", target_missing=miss)
+                                   placement="uniform" if uniform else "weighted", target_missing=miss, **aug)
     else:
         P, ball, team = load("tactical")
         segs = [(s, e + 1) for _, s, e in half_video_blocks(GAME)]

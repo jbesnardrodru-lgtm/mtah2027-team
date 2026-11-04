@@ -17,6 +17,7 @@ CROP = int(os.environ.get("SEQ_CROP", 1024))   # training crop length (steps)
 DIL = tuple(int(x) for x in os.environ.get("SEQ_DIL", "1,2,4,8,16,32").split(","))
 TAG = os.environ.get("SEQ_TAG", "")
 EXTRA = os.environ.get("SEQ_EXTRA", "")      # "DFL": add the Bundesliga matches to the lab folds
+VAR = os.environ.get("SEQ_VAR", "")          # lab variants: swap | mirror | m50 | pre (see aug_fold)
 torch.set_num_threads(4)
 
 
@@ -68,10 +69,11 @@ def target(label):
     return y[::STEP]
 
 
-def train(Xs, ys, n_in, epochs=30, seed=0, ws=None):
+def train(Xs, ys, n_in, epochs=30, seed=0, ws=None, net=None, lr=2e-3):
+    """net: continue training an existing network (fine-tuning) instead of starting from scratch."""
     torch.manual_seed(seed); rng = np.random.default_rng(seed)
-    net = TCN(n_in)
-    opt = torch.optim.AdamW(net.parameters(), lr=2e-3, weight_decay=1e-2)
+    net = net or TCN(n_in)
+    opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-2)
     lossf = nn.CrossEntropyLoss(ignore_index=-100, reduction="none")
     ws = ws or [np.ones(len(y), np.float32) for y in ys]
     n_steps = sum(len(x) for x in Xs) // CROP * 2
@@ -135,25 +137,45 @@ def inputs_fingerprint(path="data/cache/final_inputs.npz"):
 
 
 def aug_fold(test, seed, epochs=10):
-    """Lab fold with noise-augmented training (3 noisy copies per training match, same total training steps)."""
-    names = [f"G{k}{suf}" for k in (1, 2, 3) if k != test for suf in ("", "r1", "r2")]
+    """Lab fold with noise-augmented training (3 noisy copies per training match, same total training steps).
+    SEQ_VAR variants (with SEQ_EXTRA=DFL):
+      swap   + every Metrica copy with the two teams exchanged (labels H <-> A)
+      mirror + every Metrica copy mirrored top <-> bottom
+      m50    + one extra copy per Metrica match with heavier noise (50% ball missing)
+      pre    pre-train on the DFL matches only, then fine-tune on the Metrica copies"""
+    met = [f"G{k}{suf}" for k in (1, 2, 3) if k != test for suf in ("", "r1", "r2")]
+    if VAR == "swap":
+        met += [n + "x" for n in met]
+    if VAR == "mirror":
+        met += [n + "y" for n in met]
+    if VAR == "m50":
+        met += [f"G{k}m50" for k in (1, 2, 3) if k != test]
+    ext = []
     if EXTRA == "DFL":                         # + the 7 Bundesliga matches, provider flags as labels (exp_dfl)
         from possession.dfl import MATCHES
-        names += [f"DFL{m}" for m in MATCHES]
+        ext = [f"DFL{m}" for m in MATCHES]
+    names = met + ext
     G = {n: get(n) for n in names}
     cols = columns(get("G1")[1], "v3")
     allX = np.vstack([G[n][0][::STEP][:, cols] for n in names])
     mu = np.nanmean(allX, 0); sd = np.nanstd(allX, 0) + 1e-6
     del allX
-    Xs = [prep(G[n][0], cols, mu, sd)[0] for n in names]
-    ys = [target(G[n][2]) for n in names]
-    ws = [run_weight(G[n][2]) for n in names]
+    X = {n: prep(G[n][0], cols, mu, sd)[0] for n in names}
+    Y = {n: target(G[n][2]) for n in names}
+    W = {n: run_weight(G[n][2]) for n in names}
     del G
-    net = train(Xs, ys, len(cols), epochs, seed=seed, ws=ws)
+    if VAR == "pre":
+        net = train([X[n] for n in ext], [Y[n] for n in ext], len(cols), 6, seed=seed, ws=[W[n] for n in ext])
+        net = train([X[n] for n in met], [Y[n] for n in met], len(cols), 6, seed=seed, ws=[W[n] for n in met],
+                    net=net, lr=5e-4)
+    else:
+        net = train([X[n] for n in names], [Y[n] for n in names], len(cols), epochs, seed=seed,
+                    ws=[W[n] for n in names])
     F = get(f"G{test}")[0]
     Xt, _, _ = prep(F, cols, mu, sd)
     wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
-    out = f"data/cache/aug_seq{wtag}{'_dfl' if EXTRA else ''}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
+    tag = ("_dfl" if EXTRA else "") + (f"_{VAR}" if VAR else "")
+    out = f"data/cache/aug_seq{wtag}{tag}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
     np.save(out, predict(net, Xt, len(F)).astype(np.float32))
     return out
 

@@ -27,7 +27,7 @@ def segments_from_period(period):
 NOISE_V = 2  # 1 = gaps at random moments, 2 = gaps where our tracking loses the ball
 
 
-def lab_game(g, noisy=True, seed=0, noise_v=None, placement="weighted", target_missing=0.41):
+def lab_game(g, noisy=True, seed=0, noise_v=None, placement="weighted", target_missing=0.41, swap=False, mirror=False):
     """g = 1/2/3 (Metrica sample games) or 'PFF<id>' (PFF World Cup 2022 game)."""
     if isinstance(g, str) and g.startswith("PFF"):
         from possession.pff import load_pff
@@ -39,6 +39,12 @@ def lab_game(g, noisy=True, seed=0, noise_v=None, placement="weighted", target_m
         g = 500 + MATCHES.index(g[3:])
     else:
         P, ball, team, label, period = load_game(g)
+    if swap:                                   # augmentation: the two teams exchange roles (labels H <-> A)
+        team = (1 - team).astype(team.dtype)
+        label = np.where(label == "H", "A", np.where(label == "A", "H", label))
+    if mirror:                                 # augmentation: pitch mirrored top <-> bottom
+        P = P.copy(); ball = ball.copy()
+        P[:, :, 1] = 1 - P[:, :, 1]; ball[:, 1] = 1 - ball[:, 1]
     if noisy:
         v = noise_v or NOISE_V
         P, ball = degrade(P, ball, label, seed=seed + g, period=period if v == 2 else None, placement=placement,
