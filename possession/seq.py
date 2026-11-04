@@ -179,6 +179,11 @@ def aug_fold(test, seed, epochs=10):
     tag = ("_dfl" if EXTRA else "") + (f"_{VAR}" if VAR else "")
     out = f"data/cache/aug_seq{wtag}{tag}{'' if seed == 0 else f's{seed}'}_P{test}.npy"
     np.save(out, predict(net, Xt, len(F)).astype(np.float32))
+    if os.environ.get("SEQ_TTA"):              # test-time augmentation: also predict the team-swapped test match
+        Fx = get(f"G{test}x")[0]
+        Xx, _, _ = prep(Fx, cols, mu, sd)
+        px = predict(net, Xx, len(Fx))[:, [1, 0, 2]]          # swap H/A back
+        np.save(out.replace(".npy", "_tta.npy"), px.astype(np.float32))
     return out
 
 
