@@ -127,8 +127,15 @@ def final(seed, epochs=None, augmented=True):
     X = (F[::STEP] - mu) / sd
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0).clip(-6, 6).astype(np.float32)
     wtag = "" if WEIGHT_POWER == 0 else f"_w{WEIGHT_POWER:g}"
-    out = f"data/cache/seq_final{'_aug' if augmented else ''}{wtag}{'_dfl' if EXTRA else ''}{f'_{VAR}' if VAR else ''}_s{seed}.npy"
-    np.save(out, predict(net, X, len(F)).astype(np.float32))
+    tta = bool(os.environ.get("SEQ_TTA"))
+    out = (f"data/cache/seq_final{'_aug' if augmented else ''}{wtag}{'_dfl' if EXTRA else ''}{f'_{VAR}' if VAR else ''}"
+           f"{'_tta' if tta else ''}_s{seed}.npy")
+    p = predict(net, X, len(F))
+    if tta:                                    # v16: average with the prediction on the team-swapped match
+        Xx = (d["Fx"][::STEP] - mu) / sd
+        Xx = np.nan_to_num(Xx, nan=0.0, posinf=0.0, neginf=0.0).clip(-6, 6).astype(np.float32)
+        p = 0.5 * (p + predict(net, Xx, len(F))[:, [1, 0, 2]])
+    np.save(out, p.astype(np.float32))
     open(out + ".inputs", "w").write(inputs_fingerprint())
     return out
 

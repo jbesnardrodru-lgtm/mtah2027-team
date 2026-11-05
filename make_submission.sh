@@ -1,5 +1,5 @@
 #!/bin/sh
-# One command: organisers' data bundle -> final submission CSV (v15).
+# One command: organisers' data bundle -> final submission CSV (v16).
 #
 #   sh make_submission.sh <team_name>
 #
@@ -14,6 +14,7 @@ export PYTHONUNBUFFERED=1
 export SEQ_WPOW=1          # v11: every possession counts equally when training the sequence models
 export SEQ_EXTRA=DFL       # v14: the sequence models also learn from the 7 DFL/IDSSE Bundesliga matches (CC-BY 4.0)
 export SEQ_VAR=swap        # v15: ... and from team-swapped copies of the Metrica matches (labels H <-> A)
+export SEQ_TTA=1           # v16: each sequence model also predicts the match with the teams exchanged; averaged
 cd "$(dirname "$0")"
 step() { echo; echo "== $(date '+%Y-%m-%d %H:%M:%S')  $*"; }
 
@@ -42,11 +43,11 @@ python -m possession.submit --name "${TEAM}_gb" --broadcast --wpow 1
 step "5/6 sequence models (3 seeds)"
 FP=$(python -c "from possession.seq import inputs_fingerprint; print(inputs_fingerprint())")
 for s in 0 1 2; do
-  [ "$(cat data/cache/seq_final_aug_w1_dfl_swap_s$s.npy.inputs 2>/dev/null)" = "$FP" ] || python -m possession.seq final $s
+  [ "$(cat data/cache/seq_final_aug_w1_dfl_swap_tta_s$s.npy.inputs 2>/dev/null)" = "$FP" ] || python -m possession.seq final $s
 done
 
 step "6/6 blend -> evaluation/results/${TEAM}.csv"
-python -m possession.blend --name "$TEAM" --wpow 1 --wgb 0.4 --dfl --var swap
+python -m possession.blend --name "$TEAM" --wpow 1 --wgb 0.4 --dfl --var swap --tta
 python evaluation/validate_submission.py "evaluation/results/${TEAM}.csv"
 echo
 echo "checksum (must be identical on every machine):"
