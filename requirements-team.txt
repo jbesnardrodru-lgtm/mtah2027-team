@@ -4,5 +4,7 @@ pandas>=2.2
 scikit-learn>=1.5
 scipy>=1.11
 orjson>=3.9    # fast JSON for the PFF reader (optional; falls back to json)
-# (the video layer is no longer part of the submission, see STATUS.md)
+ultralytics>=8.3   # v17 video ball layer (detector trained on SoccerTrack)
+opencv-python>=4.9
+av>=14
 torch>=2.2       # sequence models (possession/seq.py), CPU is enough

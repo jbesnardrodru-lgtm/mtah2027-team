@@ -1,5 +1,5 @@
 #!/bin/sh
-# One command: organisers' data bundle -> final submission CSV (v16).
+# One command: organisers' data bundle -> final submission CSV (v17).
 #
 #   sh make_submission.sh <team_name>
 #
@@ -7,7 +7,8 @@
 # installed (requirements.txt, requirements-team.txt), internet for the first run (Metrica sample data).
 # Everything runs on CPU, deterministically. Every stage is skipped when its output already exists, so an
 # interrupted run resumes. Nothing is trained, fitted or tuned on the provided game: all models learn only
-# from the external Metrica matches (organisers' clarification of 3 Nov 2026). The provided video is not used.
+# from external matches (organisers' clarification of 3 Nov 2026). v17: the provided video is used as INPUT only, by a
+# ball detector trained on external footage (SoccerTrack); its detections can be shipped as an intermediate file.
 set -e
 TEAM="${1:-team}"
 export PYTHONUNBUFFERED=1
@@ -37,8 +38,10 @@ step "2/6 tracking caches"
 step "3/6 lab features: 3 external matches x 3 noisy copies (+ team-swapped) + 7 DFL matches"
 python -m possession.featcache_missing G1 G2 G3 G1r1 G2r1 G3r1 G1r2 G2r2 G3r2 G1x G2x G3x G1r1x G2r1x G3r1x G1r2x G2r2x G3r2x DFLJ03WMX DFLJ03WN1 DFLJ03WOH DFLJ03WOY DFLJ03WPY DFLJ03WQQ DFLJ03WR9
 
-step "4/6 gradient-boosting model + broadcast ball"
-python -m possession.submit --name "${TEAM}_gb" --broadcast --wpow 1
+step "4/6 video ball layer (detector trained on SoccerTrack only; skipped if data/cache/ball_video_st.npz exists)"
+[ -f data/cache/ball_video_st.npz ] || sh video/run_video_st.sh
+step "4b/6 gradient-boosting model + video and broadcast ball"
+python -m possession.submit --name "${TEAM}_gb" --video data/cache/ball_video_st.npz --broadcast --wpow 1
 
 step "5/6 sequence models (3 seeds)"
 FP=$(python -c "from possession.seq import inputs_fingerprint; print(inputs_fingerprint())")
