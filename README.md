@@ -42,7 +42,8 @@ tactical tracking (+ ball gaps filled from the synced broadcast tracking)
 
 - **Training data: other matches only.** Nothing is trained or tuned on the provided game, its ground truth or its
   video. Every choice was made in a cross-validated lab of external matches (`possession/lab.py`), degraded by a
-  noise simulator to look like our tracking (`possession/noise.py`).
+  noise simulator to look like our tracking (`possession/noise.py`; its settings come from aggregate
+  statistics of the provided tracking, never from labels or video).
 - **Full history** of what we tried, kept and dropped, with lab numbers: [`STATUS.md`](STATUS.md).
 
 ## Repository map
