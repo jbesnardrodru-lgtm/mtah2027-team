@@ -6,7 +6,7 @@ Last updated: 31 October 2026 (evening). Read this first; it is the shared memor
 For each of the 199,319 frames of the tactical video of FC Barcelona vs Athletic Club, output `H` (Barça has the
 ball), `A` (Athletic), `D` (dead ball) or `X` (no answer / ungraded). Ranked on **spellF1**: possessions are matched
 as whole blocks by time overlap (IoU 0.3–0.7), so splitting or merging possessions is what costs points. The
-official baseline scores **0.2433**. Deadline: **17 November 2026**. Official docs: README.md, CHALLENGE.md,
+official baseline scores **0.2433**. Deadline: **17 November 2026**. Official docs: CHALLENGE_README.md (the organisers README), CHALLENGE.md,
 EVALUATION.md, RULES.md in this repo.
 
 ## 2. Rules we must never break (read twice) — updated with the organisers' clarification of 3 Nov 2026
