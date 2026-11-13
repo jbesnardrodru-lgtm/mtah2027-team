@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 465" width="880" height="465" font-family="Helvetica, Arial, sans-serif">
+  <!-- Editable figure. Each version is one <g> block: change the label text, the bar width (= score x 500) and the value text. -->
+  <rect width="880" height="465" fill="#ffffff"/>
+  <text x="20" y="30" font-size="15" font-weight="bold" fill="#1a1a1a">Every adopted step raised mean lab spellF1, from 0.51 to 0.719</text>
+  <text x="20" y="50" font-size="12" fill="#666">Mean spellF1 over the 3 held-out external matches, by version</text>
+  <rect x="505" y="85" width="20" height="325" fill="#ececec"/>
+  <text x="515" y="77" font-size="11" fill="#666" text-anchor="middle">official baseline in the lab: 0.25–0.29</text>
+  <line x1="380" y1="85" x2="380" y2="410" stroke="#e2e2e2"/>
+  <text x="380" y="427" font-size="11" fill="#666" text-anchor="middle">0.0</text>
+  <line x1="480" y1="85" x2="480" y2="410" stroke="#e2e2e2"/>
+  <text x="480" y="427" font-size="11" fill="#666" text-anchor="middle">0.2</text>
+  <line x1="580" y1="85" x2="580" y2="410" stroke="#e2e2e2"/>
+  <text x="580" y="427" font-size="11" fill="#666" text-anchor="middle">0.4</text>
+  <line x1="680" y1="85" x2="680" y2="410" stroke="#e2e2e2"/>
+  <text x="680" y="427" font-size="11" fill="#666" text-anchor="middle">0.6</text>
+  <line x1="780" y1="85" x2="780" y2="410" stroke="#e2e2e2"/>
+  <text x="780" y="427" font-size="11" fill="#666" text-anchor="middle">0.8</text>
+  <g>
+    <text x="20" y="106" font-size="12" fill="#444">v3</text>
+    <text x="65" y="106" font-size="12" fill="#1a1a1a">first state model</text>
+    <rect x="380" y="91" width="255.0" height="20" fill="#c4c0b6"/>
+    <text x="640.0" y="106" font-size="12" fill="#1a1a1a">0.510</text>
+  </g>
+  <g>
+    <text x="20" y="138" font-size="12" fill="#444">v5</text>
+    <text x="65" y="138" font-size="12" fill="#1a1a1a">+ team-reaction features</text>
+    <rect x="380" y="123" width="280.0" height="20" fill="#c4c0b6"/>
+    <text x="665.0" y="138" font-size="12" fill="#1a1a1a">0.560</text>
+  </g>
+  <g>
+    <text x="20" y="170" font-size="12" fill="#444">v6</text>
+    <text x="65" y="170" font-size="12" fill="#1a1a1a">+ third training match</text>
+    <rect x="380" y="155" width="297.5" height="20" fill="#c4c0b6"/>
+    <text x="682.5" y="170" font-size="12" fill="#1a1a1a">0.595</text>
+  </g>
+  <g>
+    <text x="20" y="202" font-size="12" fill="#444">v8</text>
+    <text x="65" y="202" font-size="12" fill="#1a1a1a">+ temporal CNN, blended</text>
+    <rect x="380" y="187" width="305.5" height="20" fill="#c4c0b6"/>
+    <text x="690.5" y="202" font-size="12" fill="#1a1a1a">0.611</text>
+  </g>
+  <g>
+    <text x="20" y="234" font-size="12" fill="#444">v9</text>
+    <text x="65" y="234" font-size="12" fill="#1a1a1a">+ noise-augmented CNN copies</text>
+    <rect x="380" y="219" width="314.5" height="20" fill="#c4c0b6"/>
+    <text x="699.5" y="234" font-size="12" fill="#1a1a1a">0.629</text>
+  </g>
+  <g>
+    <text x="20" y="266" font-size="12" fill="#444">v11</text>
+    <text x="65" y="266" font-size="12" fill="#1a1a1a">+ every possession weighted equally</text>
+    <rect x="380" y="251" width="322.0" height="20" fill="#c4c0b6"/>
+    <text x="707.0" y="266" font-size="12" fill="#1a1a1a">0.644</text>
+  </g>
+  <g>
+    <text x="20" y="298" font-size="12" fill="#444">v13</text>
+    <text x="65" y="298" font-size="12" fill="#1a1a1a">+ blend weight 0.4 / 0.6</text>
+    <rect x="380" y="283" width="327.5" height="20" fill="#c4c0b6"/>
+    <text x="712.5" y="298" font-size="12" fill="#1a1a1a">0.655</text>
+  </g>
+  <g>
+    <text x="20" y="330" font-size="12" fill="#444">v14</text>
+    <text x="65" y="330" font-size="12" fill="#1a1a1a">+ 7 Bundesliga matches (CNN)</text>
+    <rect x="380" y="315" width="338.0" height="20" fill="#c4c0b6"/>
+    <text x="723.0" y="330" font-size="12" fill="#1a1a1a">0.676</text>
+  </g>
+  <g>
+    <text x="20" y="362" font-size="12" fill="#444">v15</text>
+    <text x="65" y="362" font-size="12" fill="#1a1a1a">+ team-swapped copies</text>
+    <rect x="380" y="347" width="345.0" height="20" fill="#c4c0b6"/>
+    <text x="730.0" y="362" font-size="12" fill="#1a1a1a">0.690</text>
+  </g>
+  <g>
+    <text x="20" y="394" font-size="12" fill="#444" font-weight="bold">v16</text>
+    <text x="65" y="394" font-size="12" fill="#1a1a1a" font-weight="bold">+ test-time team swap (final)</text>
+    <rect x="380" y="379" width="359.5" height="20" fill="#2f7bd6"/>
+    <text x="744.5" y="394" font-size="12" fill="#1a1a1a" font-weight="bold">0.719</text>
+  </g>
+</svg>

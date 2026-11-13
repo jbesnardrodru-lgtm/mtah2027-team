@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="880" height="300" font-family="Helvetica, Arial, sans-serif">
+  <!-- Editable figure: change the text inside <text> elements. Boxes are <rect>, arrows are <path>. -->
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b5b1a8"/>
+    </marker>
+  </defs>
+  <rect width="880" height="300" fill="#ffffff"/>
+  <text x="20" y="30" font-size="15" font-weight="bold" fill="#1a1a1a">Two models read the same features; their blend is decoded into possessions</text>
+
+  <!-- Tracking -->
+  <rect x="20" y="125" width="150" height="70" rx="8" fill="#fff" stroke="#c9c6be"/>
+  <text x="95" y="150" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Tracking</text>
+  <text x="95" y="168" font-size="11" fill="#555" text-anchor="middle">tactical, with ball gaps</text>
+  <text x="95" y="183" font-size="11" fill="#555" text-anchor="middle">filled from broadcast</text>
+
+  <!-- Features -->
+  <rect x="200" y="125" width="130" height="70" rx="8" fill="#fff" stroke="#c9c6be"/>
+  <text x="265" y="150" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Features</text>
+  <text x="265" y="168" font-size="11" fill="#555" text-anchor="middle">~100 per frame</text>
+  <text x="265" y="183" font-size="11" fill="#555" text-anchor="middle">team-level</text>
+
+  <!-- Gradient boosting -->
+  <rect x="380" y="55" width="220" height="60" rx="8" fill="#fff" stroke="#c9c6be"/>
+  <text x="490" y="80" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Gradient boosting</text>
+  <text x="490" y="98" font-size="11" fill="#555" text-anchor="middle">trained on 3 Metrica matches</text>
+
+  <!-- Temporal CNN -->
+  <rect x="380" y="195" width="220" height="80" rx="8" fill="#fff" stroke="#c9c6be"/>
+  <text x="490" y="220" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Temporal CNN, 3 seeds</text>
+  <text x="490" y="238" font-size="11" fill="#555" text-anchor="middle">Metrica + 7 DFL matches</text>
+  <text x="490" y="253" font-size="11" fill="#555" text-anchor="middle">team-swap training + TTA</text>
+
+  <!-- Blend -->
+  <rect x="650" y="120" width="210" height="80" rx="8" fill="#e3ecfa" stroke="#3b78d8" stroke-width="2"/>
+  <text x="755" y="145" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Blend 0.4 / 0.6</text>
+  <text x="755" y="163" font-size="11" fill="#333" text-anchor="middle">+ sticky Viterbi</text>
+  <text x="755" y="178" font-size="11" fill="#333" text-anchor="middle">to Lobos.csv</text>
+
+  <!-- Arrows -->
+  <path d="M170,160 L198,160" stroke="#b5b1a8" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <path d="M330,160 L355,160 M355,85 L355,235" stroke="#b5b1a8" stroke-width="1.5" fill="none"/>
+  <path d="M355,85 L378,85" stroke="#b5b1a8" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <path d="M355,235 L378,235" stroke="#b5b1a8" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <path d="M600,85 L625,85 L625,235 L600,235 M625,160 L648,160" stroke="#b5b1a8" stroke-width="1.5" fill="none"/>
+  <path d="M625,160 L648,160" stroke="#b5b1a8" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+</svg>
