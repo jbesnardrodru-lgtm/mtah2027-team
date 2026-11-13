@@ -31,7 +31,7 @@ scores 0.25–0.29 (officially 0.2433). This is a lab score, not the official on
 | Tactical homography | Not used. `make_submission.sh` only checks that the file is present. |
 | Smart Tagging | Not used. No code in the pipeline reads it. |
 | Tactical and broadcast video | **Not used in the submitted pipeline.** Two video ball detectors were tried and dropped (see *Tried and dropped* and *Compliance*). |
-| Public 5-minute ground truth | Used only to check the pipeline and to understand the possession definition. Never used for training, and not used to choose between versions (see *Compliance*). |
+| Public 5-minute ground truth | Used only to check the pipeline and to understand the possession definition. Never used for training, and not used to choose between model versions (see *Compliance*). |
 | Published graded windows and second-half kick-off frame (DATA.md, FAQ.md) | Used to write `X` outside the graded halves, and `D` from frame 110,808 to the kick-off at 113,742. |
 
 ## Training data (all from other games)
@@ -100,7 +100,7 @@ because team-level features carry no player identities, a model trained on other
    80, and the minimum-stoppage rule is applied last.
 
 **Every possession counts equally in training** (frame weight = 1 / length of its run). This matches spellF1,
-which counts possessions rather than frames. In the lab it raised recovered 2–5 s possessions from 48% to 57%.
+which counts possessions rather than frames. In the lab it raised recovered 2–5 s possessions from 48% to 57% (v9 → v11); v16 reaches 64%.
 
 ## Missing and noisy tracking
 
@@ -143,7 +143,7 @@ and identity switches. We handle this in four ways:
 | official baseline | nearest player + majority vote | 0.25–0.29 |
 | v3 | first state model | 0.510 |
 | v5 | + team-reaction features | 0.560 |
-| v6 | + third training match | 0.595 |
+| v6 | + third Metrica match (train on two, test on the third; before: one and one) | 0.595 |
 | v8 | + temporal CNN, blended | 0.611 |
 | v9 | + noise-augmented copies for the CNN | 0.629 |
 | v11 | + every possession weighted equally | 0.644 |
@@ -162,7 +162,7 @@ tune any parameter. They were used once, to reject v17 (see *Tried and dropped*)
 |--------------|-----|-----|
 | gradient boosting and CNN agree (decoded) | 86–87% | 81% |
 | the 3 CNN seeds agree with each other | 88–89% | 89% |
-| ball position known | 59% (simulated) | 64% |
+| ball position known | 59% (simulator mimics the tactical tracking alone) | 64% (tactical + broadcast) |
 | possessions per 90 min | 300–354 | ~300 |
 | dead-ball share of graded frames | 25–34% | 35% |
 
@@ -174,9 +174,9 @@ and we did not use it to.
 
 | idea | lab result | why dropped |
 |-----------|---------|-----------|
-| Ball detector trained only on external footage (SoccerTrack, Scott et al. 2022, LGPL-3.0), run on the provided video as input (v17) | 53% recall at 96% precision on a held-out SoccerTrack match; ball known on 75% of graded frames instead of 64% | 75% of the added balls fell in stoppages. Our training data never shows a visible ball during dead time, so the models read it as live play: dead share fell from 35% to 28% and every consistency check got worse. The lab cannot test this. |
-| Ball detector fine-tuned on pseudo-labels from the provided video | in our pipeline until v11 | Removed in v12: training on the provided video is not allowed (organisers' clarification of 3 Nov 2026) |
-| PFF FC World Cup 2022 tracking (40 matches) in training | gradient boosting 0.545–0.575 vs 0.595; CNN 0.674 vs 0.671 with one match down | different labelling convention; three times the training time |
+| Ball detector trained only on external footage (SoccerTrack, Scott et al. 2022; dataset LGPL-3.0 as listed on Kaggle, code GPL-3.0), run on the provided video as input (v17) | 53% recall at 96% precision on a held-out SoccerTrack match; ball known on 75% of graded frames instead of 64% | 75% of the added balls fell in stoppages. Our training data never shows a visible ball during dead time, so the models read it as live play: dead share fell from 35% to 28% and every consistency check got worse. The lab cannot test this. |
+| Ball detector fine-tuned on pseudo-labels from the provided video | in our pipeline until v11 | Removed in v12: training on the provided video is not allowed (organisers' clarification emailed to all participants on 3 Nov 2026) |
+| PFF FC World Cup 2022 tracking (40 of the 64 matches: those we could download) in training | gradient boosting 0.545–0.575 vs 0.595; CNN 0.674 vs 0.671 with one match down | different labelling convention; three times the training time |
 | DFL games in the gradient boosting | 0.610 vs 0.605, one match −0.039 | mixed across matches (kept for the CNN only) |
 | DFL labels rebuilt from DFL events with our rules | 0.556 on two matches (vs 0.605 and 0.620) | DFL event times drift 1–2 s from the tracking |
 | Pre-train the CNN on DFL, fine-tune on Metrica | 0.640 vs 0.658 | worse than training on both together |
@@ -199,7 +199,7 @@ The submitted pipeline learns only from other games and reads the provided game 
 - **The public 5-minute ground truth** was used to check the pipeline, and to understand what counts as
   possession, as CHALLENGE.md invites. We compared the label statistics of the key with our Metrica and PFF
   labels (`possession/convention.py`), and compared the timing of its changes of possession with ours
-  (`possession/convention_timing.py`). We also dropped an early rule ("if the ball goes
+  (`possession/convention_timing.py`). We also dropped a rule we were considering ("if the ball goes
   back, it was not a change") because the key contradicts it. The key was never used for training and never used
   to choose between model versions.
 - **Label-free checks on the provided game** (model agreement, possession counts, dead share) were used for one
@@ -207,7 +207,7 @@ The submitted pipeline learns only from other games and reads the provided game 
 - **Noise simulator settings.** They come from aggregate statistics of the provided automatic tracking (missing-ball
   share, gap lengths, ball smoothness, players tracked), not from its labels or video, and they shape only the
   external training data. We disclose this so the organisers can judge it.
-- **Before the 3 November clarification** our pipeline included a ball detector fine-tuned on frames of the
+- **Before the 3 November clarification** (emailed to all participants) our pipeline included a ball detector fine-tuned on frames of the
   provided video, and we watched clips of its output against the video. After the clarification we removed that
   detector (v12) and stopped all such inspection. No parameter of the submitted pipeline came from it.
 - **Use of LLMs.** Claude (Anthropic) helped write and debug the code, and ran it on a team member's computer.
@@ -261,7 +261,7 @@ Matteo's, Python 3.14.7 and 3.14.6) produced this same file.
 - Bassek, M., Rein, R., Weber, H. et al. An integrated dataset of spatiotemporal and event data in elite soccer.
   *Sci Data* 12, 195 (2025). doi:10.1038/s41597-025-04505-y (CC BY 4.0)
 - Scott, A. et al. SoccerTrack: a dataset and tracking algorithm for soccer with fish-eye and drone videos. CVPRW
-  2022 (LGPL-3.0). Dropped experiment only.
+  2022. Dataset on Kaggle (atomscott/soccertrack, LGPL-3.0); code on GitHub (GPL-3.0). Dropped experiment only.
 - Kim, H., Lee, K., Seo, S., Ko, S.-K., Yoon, J. and Park, C. PathCRF: Ball-free soccer event detection via
   possession path inference from player trajectories. KDD 2026. Code: github.com/hyunsungkim-ds/pathcrf (MPL-2.0).
   Dropped experiment only.
