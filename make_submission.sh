@@ -3,8 +3,8 @@
 #
 #   sh make_submission.sh <team_name>
 #
-# Needs: the data bundle unpacked in data/ (see data/README.md), Python 3.10+ with the requirements
-# installed (requirements.txt, requirements-team.txt), internet for the first run (Metrica sample data).
+# Needs: the data bundle unpacked in data/ (see data/README.md), Python 3.14 with the exact versions
+# in requirements-lock.txt (pip install -r requirements-lock.txt), internet for the first run (Metrica sample data).
 # Everything runs on CPU, deterministically. Every stage is skipped when its output already exists, so an
 # interrupted run resumes. Nothing is trained, fitted or tuned on the provided game: all models learn only
 # from external matches (organisers' clarification of 3 Nov 2026). The provided video is not used.
